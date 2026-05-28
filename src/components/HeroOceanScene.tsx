@@ -57,7 +57,7 @@ export default function HeroOceanScene() {
 
       {/* Large faint enso circle */}
       <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-0">
-        <div className="w-[80vmin] h-[80vmin] rounded-full border border-[#c8a84b]/10" />
+        <div className="w-[106vmin] h-[106vmin] rounded-full border border-[#c8a84b]/10" />
       </div>
 
       {/* Large faint 鯉 kanji watermark */}
@@ -76,7 +76,7 @@ export default function HeroOceanScene() {
         className="absolute inset-0 flex items-center justify-center z-[1] pointer-events-none"
         style={{ mixBlendMode: 'multiply' }}
       >
-        <div className="relative w-[78vmin] h-[78vmin]">
+        <div className="relative w-[104vmin] h-[104vmin]">
           <Image
             src="/koi-color.png"
             alt="Koi fish"
@@ -93,7 +93,7 @@ export default function HeroOceanScene() {
         className="absolute inset-0 flex items-center justify-center z-[2] pointer-events-none"
         style={{ clipPath: clipPath as unknown as string, mixBlendMode: 'multiply' }}
       >
-        <div className="relative w-[78vmin] h-[78vmin]">
+        <div className="relative w-[104vmin] h-[104vmin]">
           <Image
             src="/koi-ink.png"
             alt="Koi ink art"
