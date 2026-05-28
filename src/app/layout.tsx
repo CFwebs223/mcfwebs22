@@ -13,7 +13,6 @@ const inter = Inter({
 const LenisProvider = dynamic(() => import("@/components/LenisProvider"), { ssr: false });
 const CustomCursor = dynamic(() => import("@/components/CustomCursor"), { ssr: false });
 const ScrollProgress = dynamic(() => import("@/components/ScrollProgress"), { ssr: false });
-const LoadingScreen = dynamic(() => import("@/components/LoadingScreen"), { ssr: false });
 
 export const metadata: Metadata = {
   title: "mcf.webs | AI-Built Websites & Digital Products",
@@ -30,11 +29,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="dark">
-      <head>
-        <link rel="preload" href="/videos/hero_optimized.mp4" as="video" type="video/mp4" />
-      </head>
       <body className={`${inter.className} bg-black text-white antialiased`}>
-        <LoadingScreen />
         <CustomCursor />
         <ScrollProgress />
         <LenisProvider>
