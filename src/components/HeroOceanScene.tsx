@@ -124,38 +124,18 @@ export default function HeroOceanScene() {
           <div className="absolute bottom-4 left-4  w-9 h-9 border-b-[1.5px] border-l-[1.5px] border-[#c8a84b]/55 pointer-events-none" />
           <div className="absolute bottom-4 right-4 w-9 h-9 border-b-[1.5px] border-r-[1.5px] border-[#c8a84b]/55 pointer-events-none" />
 
-          {/* Enso circle */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
-            <div className="w-[106vmin] h-[106vmin] rounded-full border border-[#c8a84b]/10" />
+
+          {/* Colorful koi — full screen base */}
+          <div className="absolute inset-0 pointer-events-none">
+            <Image src="/koi-color.png" alt="Koi fish" fill className="object-contain select-none" priority draggable={false} />
           </div>
 
-          {/* 鯉 watermark */}
-          <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none">
-            <span
-              className="text-[30vmin] font-bold text-[#c8a84b]/[0.028]"
-              style={{ fontFamily: 'Georgia, serif', lineHeight: 1 }}
-              aria-hidden
-            >鯉</span>
-          </div>
-
-          {/* Colorful koi — base */}
-          <div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            style={{ mixBlendMode: 'multiply' }}
-          >
-            <div className="relative w-[104vmin] h-[104vmin]">
-              <Image src="/koi-color.png" alt="Koi fish" fill className="object-contain select-none" priority draggable={false} />
-            </div>
-          </div>
-
-          {/* Ink koi — hover reveal */}
+          {/* Ink koi — hover reveal, full screen */}
           <motion.div
-            className="absolute inset-0 flex items-center justify-center pointer-events-none"
-            style={{ clipPath: clipPath as unknown as string, mixBlendMode: 'multiply' }}
+            className="absolute inset-0 pointer-events-none"
+            style={{ clipPath: clipPath as unknown as string }}
           >
-            <div className="relative w-[104vmin] h-[104vmin]">
-              <Image src="/koi-ink.png" alt="" fill className="object-contain select-none" draggable={false} />
-            </div>
+            <Image src="/koi-ink.png" alt="" fill className="object-contain select-none" draggable={false} />
           </motion.div>
 
           {/* Brand — top center */}
