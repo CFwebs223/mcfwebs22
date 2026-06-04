@@ -11,23 +11,24 @@
  */
 
 require('dotenv').config();
-const express       = require('express');
-const twilio        = require('twilio');
-const VoiceResponse = twilio.twiml.VoiceResponse;
+const express  = require('express');
+const { RestClient } = require('@signalwire/compatibility-api');
+
+const VoiceResponse = RestClient.LaML.VoiceResponse;
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
-const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || '';
-const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '';
-const PORT                = process.env.PORT || 3001;
+const SW_PROJECT_ID = process.env.SW_PROJECT_ID || '';
+const SW_API_TOKEN  = process.env.SW_API_TOKEN  || '';
+const SW_SPACE_URL  = process.env.SW_SPACE_URL  || ''; // e.g. yourspace.signalwire.com
+const SW_PHONE      = process.env.SW_PHONE      || ''; // your SignalWire number e.g. +12345678900
+const PORT          = process.env.PORT          || 3001;
 
-// Lazy Twilio client — only used for WhatsApp notifications, won't crash server if missing
 function getClient() {
-  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) return null;
-  return twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+  if (!SW_PROJECT_ID || !SW_API_TOKEN || !SW_SPACE_URL) return null;
+  return RestClient(SW_PROJECT_ID, SW_API_TOKEN, { signalwireSpaceUrl: SW_SPACE_URL });
 }
 
 // ── Team numbers ───────────────────────────────────────────────────────────────
@@ -69,7 +70,7 @@ app.post('/call', (req, res) => {
   g.say(VOICE, GREETING);
   // No input — transfer to CFO by default
   r.say(VOICE, "Connecting you to our team now. Please hold.");
-  r.dial({ callerId: TWILIO_PHONE_NUMBER, timeout: 20, action: '/no-answer' }, CFO_CHRIS);
+  r.dial({ callerId: SW_PHONE, timeout: 20, action: '/no-answer' }, CFO_CHRIS);
   res.type('text/xml').send(r.toString());
 });
 
@@ -89,13 +90,13 @@ app.post('/menu', (req, res) => {
     // CEO KV
     r.say(VOICE, 'Connecting you to our CEO, K V. Please hold.');
     notifyTeam(caller, 'KV', CEO_KV);
-    r.dial({ callerId: TWILIO_PHONE_NUMBER, timeout: 20, action: '/no-answer-kv' }, CEO_KV);
+    r.dial({ callerId: SW_PHONE, timeout: 20, action: '/no-answer-kv' }, CEO_KV);
 
   } else if (digit === '3') {
     // CFO Christopher
     r.say(VOICE, 'Connecting you to our CFO, Christopher. Please hold.');
     notifyTeam(caller, 'Christopher', CFO_CHRIS);
-    r.dial({ callerId: TWILIO_PHONE_NUMBER, timeout: 20, action: '/no-answer-chris' }, CFO_CHRIS);
+    r.dial({ callerId: SW_PHONE, timeout: 20, action: '/no-answer-chris' }, CFO_CHRIS);
 
   } else if (digit === '4') {
     // Voicemail
@@ -113,7 +114,7 @@ app.post('/menu', (req, res) => {
 app.post('/no-answer-kv', (req, res) => {
   const r = new VoiceResponse();
   r.say(VOICE, 'K V is unavailable right now. Let me connect you to Christopher.');
-  r.dial({ callerId: TWILIO_PHONE_NUMBER, timeout: 20, action: '/no-answer' }, CFO_CHRIS);
+  r.dial({ callerId: SW_PHONE, timeout: 20, action: '/no-answer' }, CFO_CHRIS);
   res.type('text/xml').send(r.toString());
 });
 
@@ -121,7 +122,7 @@ app.post('/no-answer-kv', (req, res) => {
 app.post('/no-answer-chris', (req, res) => {
   const r = new VoiceResponse();
   r.say(VOICE, 'Christopher is unavailable right now. Let me connect you to K V.');
-  r.dial({ callerId: TWILIO_PHONE_NUMBER, timeout: 20, action: '/no-answer' }, CEO_KV);
+  r.dial({ callerId: SW_PHONE, timeout: 20, action: '/no-answer' }, CEO_KV);
   res.type('text/xml').send(r.toString());
 });
 
@@ -154,13 +155,13 @@ app.post('/transcript', async (req, res) => {
 // ── Notifications ──────────────────────────────────────────────────────────────
 
 async function notifyTeam(caller, name, number) {
-  if (!TWILIO_ACCOUNT_SID) return;
+  if (!SW_PROJECT_ID) return;
   const msg = `📞 *INCOMING CALL for ${name}*\nCaller: ${caller}\nConnecting now — get ready! 💰`;
   await sendWA(number, msg);
 }
 
 async function notifyBoth(caller, type, extra = '') {
-  if (!TWILIO_ACCOUNT_SID) return;
+  if (!SW_PROJECT_ID) return;
   const msgs = {
     voicemail:  `📞 *VOICEMAIL — New Lead!*\nCaller: ${caller}\nThey left a message. Check Twilio console for the recording.\nhttps://console.twilio.com 🔥`,
     transcript: `📝 *VOICEMAIL TRANSCRIPT*\nCaller: ${caller}\n\n"${extra}"\n\nCall them back! 💰`,
@@ -173,13 +174,15 @@ async function notifyBoth(caller, type, extra = '') {
 
 async function sendWA(to, body) {
   const c = getClient();
-  if (!c || !TWILIO_PHONE_NUMBER) return;
+  if (!c || !SW_PHONE) return;
   try {
-    const from = `whatsapp:${TWILIO_PHONE_NUMBER}`;
-    const toWA = `whatsapp:+${to.replace(/\D/g, '')}`;
-    await c.messages.create({ from, to: toWA, body });
+    await c.messages.create({
+      from: SW_PHONE,
+      to,
+      body,
+    });
   } catch (err) {
-    console.error(`WA notify failed (${to}):`, err.message);
+    console.error(`SMS notify failed (${to}):`, err.message);
   }
 }
 
@@ -188,7 +191,8 @@ app.get('/', (req, res) => res.send('MCF Websites Receptionist ✅ Online'));
 
 app.listen(PORT, '0.0.0.0', () => {
   console.log(`\n📞 MCF Receptionist running on port ${PORT}`);
-  console.log(`   SID set:   ${TWILIO_ACCOUNT_SID ? '✅' : '❌ MISSING'}`);
-  console.log(`   Token set: ${TWILIO_AUTH_TOKEN  ? '✅' : '❌ MISSING'}`);
-  console.log(`   Number:    ${TWILIO_PHONE_NUMBER || '❌ MISSING'}\n`);
+  console.log(`   Project ID: ${SW_PROJECT_ID ? '✅' : '❌ MISSING'}`);
+  console.log(`   API Token:  ${SW_API_TOKEN  ? '✅' : '❌ MISSING'}`);
+  console.log(`   Space URL:  ${SW_SPACE_URL  || '❌ MISSING'}`);
+  console.log(`   Number:     ${SW_PHONE      || '❌ MISSING'}\n`);
 });
