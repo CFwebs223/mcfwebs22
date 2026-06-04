@@ -66,9 +66,8 @@ app.post('/call', (req, res) => {
   const r = new VoiceResponse();
   const g = r.gather({ numDigits: '1', action: '/menu', timeout: 7 });
   g.say(VOICE, GREETING);
-  // No input — transfer to CFO by default
-  r.say(VOICE, "Connecting you to our team now. Please hold.");
-  r.dial({ callerId: TWILIO_NUM, timeout: 20, action: '/no-answer' }, CFO_CHRIS);
+  // No input — repeat the menu
+  r.redirect('/call');
   res.type('text/xml').send(r.toString());
 });
 
@@ -108,19 +107,19 @@ app.post('/menu', (req, res) => {
   res.type('text/xml').send(r.toString());
 });
 
-// KV didn't answer
+// KV didn't answer — go straight to voicemail
 app.post('/no-answer-kv', (req, res) => {
   const r = new VoiceResponse();
-  r.say(VOICE, 'K V is unavailable right now. Let me connect you to Christopher.');
-  r.dial({ callerId: TWILIO_NUM, timeout: 20, action: '/no-answer' }, CFO_CHRIS);
+  r.say(VOICE, 'K V is unavailable right now. Please leave your name and number after the tone and we will call you right back.');
+  r.record({ maxLength: 20, action: '/recording', transcribe: true, transcribeCallback: '/transcript' });
   res.type('text/xml').send(r.toString());
 });
 
-// Christopher didn't answer
+// Christopher didn't answer — go straight to voicemail
 app.post('/no-answer-chris', (req, res) => {
   const r = new VoiceResponse();
-  r.say(VOICE, 'Christopher is unavailable right now. Let me connect you to K V.');
-  r.dial({ callerId: TWILIO_NUM, timeout: 20, action: '/no-answer' }, CEO_KV);
+  r.say(VOICE, 'Christopher is unavailable right now. Please leave your name and number after the tone and we will call you right back.');
+  r.record({ maxLength: 20, action: '/recording', transcribe: true, transcribeCallback: '/transcript' });
   res.type('text/xml').send(r.toString());
 });
 
