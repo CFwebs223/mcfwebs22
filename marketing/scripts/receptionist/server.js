@@ -11,27 +11,30 @@
  */
 
 require('dotenv').config();
-const express      = require('express');
-const twilio       = require('twilio');
+const express       = require('express');
+const twilio        = require('twilio');
 const VoiceResponse = twilio.twiml.VoiceResponse;
 
 const app = express();
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
-const {
-  TWILIO_ACCOUNT_SID,
-  TWILIO_AUTH_TOKEN,
-  TWILIO_PHONE_NUMBER,
-  PORT = 3001,
-} = process.env;
+const TWILIO_ACCOUNT_SID  = process.env.TWILIO_ACCOUNT_SID  || '';
+const TWILIO_AUTH_TOKEN   = process.env.TWILIO_AUTH_TOKEN   || '';
+const TWILIO_PHONE_NUMBER = process.env.TWILIO_PHONE_NUMBER || '';
+const PORT                = process.env.PORT || 3001;
+
+// Lazy Twilio client — only used for WhatsApp notifications, won't crash server if missing
+function getClient() {
+  if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN) return null;
+  return twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
+}
 
 // ── Team numbers ───────────────────────────────────────────────────────────────
 const CEO_KV       = '+27615442591'; // KV — CEO
 const CFO_CHRIS    = '+27753203477'; // Christopher — CFO
 
-const client = twilio(TWILIO_ACCOUNT_SID, TWILIO_AUTH_TOKEN);
-const VOICE  = { voice: 'Polly.Joanna-Neural' };
+const VOICE = { voice: 'Polly.Joanna-Neural' };
 
 // ── Scripts ────────────────────────────────────────────────────────────────────
 const GREETING = `Welcome to MCF Websites — South Africa's premium web design agency.
@@ -169,10 +172,12 @@ async function notifyBoth(caller, type, extra = '') {
 }
 
 async function sendWA(to, body) {
+  const c = getClient();
+  if (!c || !TWILIO_PHONE_NUMBER) return;
   try {
     const from = `whatsapp:${TWILIO_PHONE_NUMBER}`;
     const toWA = `whatsapp:+${to.replace(/\D/g, '')}`;
-    await client.messages.create({ from, to: toWA, body });
+    await c.messages.create({ from, to: toWA, body });
   } catch (err) {
     console.error(`WA notify failed (${to}):`, err.message);
   }
@@ -181,9 +186,9 @@ async function sendWA(to, body) {
 // ── Health check ───────────────────────────────────────────────────────────────
 app.get('/', (req, res) => res.send('MCF Websites Receptionist ✅ Online'));
 
-app.listen(PORT, () => {
-  console.log(`\n📞 MCF Receptionist running on http://localhost:${PORT}`);
-  console.log(`   KV  (CEO):       ${CEO_KV}`);
-  console.log(`   Christopher (CFO): ${CFO_CHRIS}`);
-  console.log(`\n   Waiting for tunnel URL to point Twilio at...\n`);
+app.listen(PORT, '0.0.0.0', () => {
+  console.log(`\n📞 MCF Receptionist running on port ${PORT}`);
+  console.log(`   SID set:   ${TWILIO_ACCOUNT_SID ? '✅' : '❌ MISSING'}`);
+  console.log(`   Token set: ${TWILIO_AUTH_TOKEN  ? '✅' : '❌ MISSING'}`);
+  console.log(`   Number:    ${TWILIO_PHONE_NUMBER || '❌ MISSING'}\n`);
 });
