@@ -174,13 +174,10 @@ async function sendWA(to, body) {
   const c = getClient();
   if (!c || !TWILIO_NUM) return;
   try {
-    await c.messages.create({
-      from: `whatsapp:${TWILIO_NUM}`,
-      to:   `whatsapp:${to}`,
-      body,
-    });
+    // Send SMS (works on all Twilio accounts, no WhatsApp approval needed)
+    await c.messages.create({ from: TWILIO_NUM, to, body });
   } catch (err) {
-    console.error(`WA notify failed (${to}):`, err.message);
+    console.error(`SMS notify failed (${to}):`, err.message);
   }
 }
 
