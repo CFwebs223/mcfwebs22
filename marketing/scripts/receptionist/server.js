@@ -40,8 +40,8 @@ const GREETING = `Welcome to MCF Websites — South Africa's premium web design 
 We build professional websites that get your business found on Google and bring in more clients.
 
 For our packages and pricing, press 1.
-To speak with our CEO, K V, press 2.
-To speak with our CFO, Christopher, press 3.
+To get K V's direct WhatsApp number, press 2.
+To get Christopher's direct WhatsApp number, press 3.
 To leave your name and number for a callback, press 4.`;
 
 const PRICING = `Here are our three packages.
@@ -55,8 +55,8 @@ The Premium package is R 7,500 and includes a full online store with payment gat
 
 All packages include our risk-free guarantee. We build your website first — you only pay if you love it. Zero risk to you.
 
-To speak with our CEO, K V, press 2.
-To speak with our CFO, Christopher, press 3.
+To get K V's direct WhatsApp, press 2.
+To get Christopher's direct WhatsApp, press 3.
 Or WhatsApp us directly on 0 7 5 3 2 0 3 4 7 7.`;
 
 // ── Routes ─────────────────────────────────────────────────────────────────────
@@ -81,19 +81,19 @@ app.post('/menu', (req, res) => {
     // Pricing
     r.say(VOICE, PRICING);
     const g = r.gather({ numDigits: '1', action: '/menu', timeout: 7 });
-    g.say(VOICE, 'Press 2 for CEO K V, press 3 for CFO Christopher, or press 4 to leave a message.');
+    g.say(VOICE, 'Press 2 for K V\'s WhatsApp, press 3 for Christopher\'s WhatsApp, or press 4 to leave a message.');
 
   } else if (digit === '2') {
-    // CEO KV
-    r.say(VOICE, 'Connecting you to our CEO, K V. Please hold.');
+    // CEO KV — WhatsApp redirect (Twilio trial can't call SA numbers)
     notifyTeam(caller, 'KV', CEO_KV);
-    r.dial({ callerId: TWILIO_NUM, timeout: 20, action: '/no-answer-kv' }, CEO_KV);
+    r.say(VOICE, 'To reach our CEO K V directly, please WhatsApp 0 6 1 5 4 4 2 5 9 1. That is 0 6 1, 5 4 4, 2 5 9 1. K V will call you right back.');
+    r.redirect('/call');
 
   } else if (digit === '3') {
-    // CFO Christopher
-    r.say(VOICE, 'Connecting you to our CFO, Christopher. Please hold.');
+    // CFO Christopher — WhatsApp redirect
     notifyTeam(caller, 'Christopher', CFO_CHRIS);
-    r.dial({ callerId: TWILIO_NUM, timeout: 20, action: '/no-answer-chris' }, CFO_CHRIS);
+    r.say(VOICE, 'To reach our CFO Christopher directly, please WhatsApp 0 7 5 3 2 0 3 4 7 7. That is 0 7 5, 3 2 0, 3 4 7 7. Christopher will call you right back.')
+    r.redirect('/call');
 
   } else if (digit === '4') {
     // Voicemail
