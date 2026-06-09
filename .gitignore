@@ -40,3 +40,18 @@ ruvector.db
 .claude-flow/
 .swarm/
 .mcp.json
+
+# Marketing — sensitive data (NEVER commit)
+marketing/leads/.env
+marketing/leads/sessions/
+marketing/leads/fb-session/
+marketing/leads/ig-session/
+marketing/leads/linkedin-session/
+marketing/leads/*.json
+marketing/leads/*.md
+marketing/leads/*.log
+marketing/leads/tunnel.log
+.wwebjs_cache/
+
+# Marketing — generated/runtime
+marketing/images/

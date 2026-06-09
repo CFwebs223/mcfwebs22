@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>MCF Control Centre</title>
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { background: #0a0a0f; color: #e0e0e0; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; }
+.header { background: linear-gradient(135deg, #1a1a2e, #16213e); padding: 16px 20px; border-bottom: 1px solid #2a2a3e; display: flex; align-items: center; justify-content: space-between; }
+.header h1 { font-size: 1.2rem; font-weight: 700; color: #fff; }
+.header h1 span { color: #4ade80; }
+.pulse { width: 10px; height: 10px; border-radius: 50%; background: #4ade80; box-shadow: 0 0 0 0 rgba(74, 222, 128, 0.4); animation: pulse 2s infinite; display: inline-block; }
+.pulse.off { background: #ef4444; box-shadow: none; animation: none; }
+@keyframes pulse { 0%,100%{box-shadow:0 0 0 0 rgba(74,222,128,.4)} 70%{box-shadow:0 0 0 10px rgba(74,222,128,0)} }
+.container { max-width: 800px; margin: 0 auto; padding: 16px; }
+.grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }
+.grid.three { grid-template-columns: repeat(3, 1fr); }
+@media(max-width:480px) { .grid, .grid.three { grid-template-columns: repeat(2, 1fr); } }
+.card { background: #12121f; border: 1px solid #1e1e2e; border-radius: 12px; padding: 16px; }
+.card .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 4px; }
+.card .value { font-size: 2rem; font-weight: 800; color: #fff; line-height: 1; }
+.card .value.green { color: #4ade80; }
+.card .value.yellow { color: #fbbf24; }
+.card .value.blue { color: #60a5fa; }
+.card .value.red { color: #f87171; }
+.card .sub { font-size: 0.75rem; color: #6b7280; margin-top: 4px; }
+.section { background: #12121f; border: 1px solid #1e1e2e; border-radius: 12px; padding: 16px; margin-bottom: 16px; }
+.section h2 { font-size: 0.85rem; text-transform: uppercase; letter-spacing: 0.1em; color: #6b7280; margin-bottom: 12px; }
+.btn { background: #1e1e2e; border: 1px solid #2e2e4e; color: #fff; padding: 10px 16px; border-radius: 8px; font-size: 0.85rem; cursor: pointer; width: 100%; margin-bottom: 8px; transition: all 0.2s; font-weight: 600; }
+.btn:hover { background: #2e2e4e; }
+.btn.green { background: #166534; border-color: #15803d; color: #4ade80; }
+.btn.green:hover { background: #15803d; }
+.btn.red { background: #7f1d1d; border-color: #991b1b; color: #f87171; }
+.btn.red:hover { background: #991b1b; }
+.btn.blue { background: #1e3a5f; border-color: #1d4ed8; color: #60a5fa; }
+.btn.blue:hover { background: #1d4ed8; }
+.btn-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.reply-item { padding: 10px; border-bottom: 1px solid #1e1e2e; }
+.reply-item:last-child { border-bottom: none; }
+.reply-name { font-weight: 700; color: #4ade80; font-size: 0.9rem; }
+.reply-detail { font-size: 0.75rem; color: #6b7280; margin-top: 2px; }
+.activity-item { display: flex; align-items: center; gap: 10px; padding: 8px 0; border-bottom: 1px solid #1e1e2e; font-size: 0.8rem; }
+.activity-item:last-child { border-bottom: none; }
+.dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+.dot.sent { background: #4ade80; }
+.dot.failed { background: #f87171; }
+.dot.replied { background: #fbbf24; }
+.act-name { flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.act-time { color: #6b7280; white-space: nowrap; }
+.log-box { background: #0a0a0f; border: 1px solid #1e1e2e; border-radius: 8px; padding: 10px; height: 200px; overflow-y: auto; font-family: monospace; font-size: 0.7rem; color: #6b7280; }
+.log-box p { margin-bottom: 2px; }
+.log-box p.ok { color: #4ade80; }
+.log-box p.err { color: #f87171; }
+.tab-row { display: flex; gap: 8px; margin-bottom: 12px; }
+.tab { padding: 6px 14px; border-radius: 6px; font-size: 0.75rem; cursor: pointer; background: #1e1e2e; border: 1px solid #2e2e4e; color: #6b7280; }
+.tab.active { background: #1e3a5f; border-color: #1d4ed8; color: #60a5fa; }
+.toast { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: #1a2f1a; border: 1px solid #4ade80; color: #4ade80; padding: 10px 20px; border-radius: 8px; font-size: 0.85rem; font-weight: 600; opacity: 0; transition: opacity 0.3s; z-index: 999; pointer-events: none; }
+.toast.show { opacity: 1; }
+.status-row { display: flex; align-items: center; gap: 8px; margin-bottom: 16px; }
+.status-badge { display: flex; align-items: center; gap: 6px; background: #12121f; border: 1px solid #1e1e2e; border-radius: 20px; padding: 6px 12px; font-size: 0.8rem; font-weight: 600; }
+.refresh-time { font-size: 0.7rem; color: #6b7280; margin-left: auto; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>MCF <span>Control</span></h1>
+  <div style="display:flex;align-items:center;gap:8px">
+    <span class="pulse" id="engineDot"></span>
+    <span style="font-size:0.75rem;color:#6b7280" id="engineStatus">Loading...</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- Status row -->
+  <div class="status-row" style="margin-top:12px">
+    <div class="status-badge" id="engineBadge">⚙️ Checking...</div>
+    <div class="refresh-time" id="lastUpdate"></div>
+  </div>
+
+  <!-- Key stats -->
+  <div class="grid three">
+    <div class="card">
+      <div class="label">Sent Today</div>
+      <div class="value green" id="sentToday">—</div>
+      <div class="sub">of 100 daily limit</div>
+    </div>
+    <div class="card">
+      <div class="label">Total Sent</div>
+      <div class="value blue" id="totalSent">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Replied 🎉</div>
+      <div class="value yellow" id="replied">—</div>
+    </div>
+  </div>
+
+  <div class="grid">
+    <div class="card">
+      <div class="label">Leads Left</div>
+      <div class="value" id="unsent">—</div>
+      <div class="sub" id="totalLeads"></div>
+    </div>
+    <div class="card">
+      <div class="label">Groups Posted</div>
+      <div class="value blue" id="groupsToday">—</div>
+      <div class="sub">today</div>
+    </div>
+    <div class="card">
+      <div class="label">Follow-up 1</div>
+      <div class="value" id="fu1">—</div>
+    </div>
+    <div class="card">
+      <div class="label">Follow-up 2</div>
+      <div class="value" id="fu2">—</div>
+    </div>
+  </div>
+
+  <!-- Controls -->
+  <div class="section">
+    <h2>Controls</h2>
+    <div class="btn-row">
+      <button class="btn green" onclick="runEngine()">▶ Send Now</button>
+      <button class="btn red" onclick="stopEngine()">■ Stop Engine</button>
+    </div>
+    <div class="btn-row">
+      <button class="btn blue" onclick="runPoster()">📤 Post to Group</button>
+      <button class="btn" onclick="runScraper()">🔍 Find New Leads</button>
+    </div>
+  </div>
+
+  <!-- Replies -->
+  <div class="section" id="repliesSection" style="display:none">
+    <h2>🎉 Replies (potential clients!)</h2>
+    <div id="repliesList"></div>
+  </div>
+
+  <!-- Recent activity -->
+  <div class="section">
+    <h2>Recent Activity</h2>
+    <div id="activityList"></div>
+  </div>
+
+  <!-- Logs -->
+  <div class="section">
+    <h2>Logs</h2>
+    <div class="tab-row">
+      <div class="tab active" onclick="switchLog('engine',this)">Engine</div>
+      <div class="tab" onclick="switchLog('groups',this)">Groups</div>
+      <div class="tab" onclick="switchLog('scraper',this)">Scraper</div>
+    </div>
+    <div class="log-box" id="logBox">Loading...</div>
+  </div>
+
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+let currentLog = 'engine';
+
+function showToast(msg, color = '#4ade80') {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.style.background = color === 'red' ? '#2a0a0a' : '#1a2f1a';
+  t.style.borderColor = color === 'red' ? '#f87171' : '#4ade80';
+  t.style.color = color === 'red' ? '#f87171' : '#4ade80';
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
+}
+
+async function api(url, method = 'GET') {
+  const res = await fetch(url, method === 'POST' ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' } : {});
+  return res.json();
+}
+
+async function loadStats() {
+  try {
+    const d = await api('/api/stats');
+
+    // Engine status
+    const dot    = document.getElementById('engineDot');
+    const status = document.getElementById('engineStatus');
+    const badge  = document.getElementById('engineBadge');
+    if (d.engine.running) {
+      dot.className = 'pulse';
+      status.textContent = 'Engine running';
+      badge.textContent = '⚙️ Engine: RUNNING';
+      badge.style.color = '#4ade80';
+    } else {
+      dot.className = 'pulse off';
+      status.textContent = 'Engine stopped';
+      badge.textContent = '⏸ Engine: STOPPED';
+      badge.style.color = '#f87171';
+    }
+
+    document.getElementById('sentToday').textContent  = d.engine.sentToday;
+    document.getElementById('totalSent').textContent  = d.engine.totalSent;
+    document.getElementById('replied').textContent    = d.engine.replied;
+    document.getElementById('fu1').textContent        = d.engine.fu1;
+    document.getElementById('fu2').textContent        = d.engine.fu2;
+    document.getElementById('unsent').textContent     = d.leads.unsent;
+    document.getElementById('totalLeads').textContent = `of ${d.leads.total} total leads`;
+    document.getElementById('groupsToday').textContent = d.groups.postedToday;
+    document.getElementById('lastUpdate').textContent = 'Updated ' + new Date().toLocaleTimeString();
+
+    // Replies
+    if (d.replies && d.replies.length > 0) {
+      document.getElementById('repliesSection').style.display = 'block';
+      document.getElementById('repliesList').innerHTML = d.replies.map(r => `
+        <div class="reply-item">
+          <div class="reply-name">🎉 ${r.name || r.phone}</div>
+          <div class="reply-detail">${r.phone} · ${r.category || ''} · ${r.city || ''}</div>
+          <div class="reply-detail">${new Date(r.repliedAt).toLocaleString()}</div>
+        </div>
+      `).join('');
+    }
+  } catch (e) {
+    document.getElementById('engineStatus').textContent = 'Error loading stats';
+  }
+}
+
+async function loadActivity() {
+  try {
+    const data = await api('/api/activity');
+    document.getElementById('activityList').innerHTML = data.slice(0, 30).map(item => `
+      <div class="activity-item">
+        <div class="dot ${item.replied ? 'replied' : item.status}"></div>
+        <div class="act-name">${item.name || item.phone}</div>
+        <div class="act-time">${item.sentAt ? new Date(item.sentAt).toLocaleTimeString() : ''}</div>
+      </div>
+    `).join('') || '<p style="color:#6b7280;font-size:0.8rem">No activity yet</p>';
+  } catch {}
+}
+
+async function loadLog(type) {
+  try {
+    const d = document.getElementById('logBox');
+    const { lines } = await api(`/api/logs/${type}`);
+    d.innerHTML = lines.length
+      ? lines.reverse().map(l => {
+          const cls = l.includes('✅') || l.includes('Sent') ? 'ok' : l.includes('❌') ? 'err' : '';
+          return `<p class="${cls}">${l.replace(/</g,'&lt;')}</p>`;
+        }).join('')
+      : '<p>No logs yet</p>';
+  } catch {}
+}
+
+function switchLog(type, el) {
+  currentLog = type;
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  el.classList.add('active');
+  loadLog(type);
+}
+
+async function runEngine() {
+  const d = await api('/api/engine/run-now', 'POST');
+  showToast(d.message || 'Engine started!');
+  setTimeout(loadStats, 3000);
+}
+
+async function stopEngine() {
+  const d = await api('/api/engine/stop', 'POST');
+  showToast(d.message || 'Engine stopped', 'red');
+  setTimeout(loadStats, 1000);
+}
+
+async function runPoster() {
+  const d = await api('/api/poster/run-now', 'POST');
+  showToast(d.message || 'Poster started!');
+}
+
+async function runScraper() {
+  const d = await api('/api/scraper/run-now', 'POST');
+  showToast(d.message || 'Scraper started!');
+}
+
+// Load everything on start
+loadStats();
+loadActivity();
+loadLog(currentLog);
+
+// Auto-refresh every 30s
+setInterval(() => { loadStats(); loadActivity(); loadLog(currentLog); }, 30000);
+</script>
+</body>
+</html>

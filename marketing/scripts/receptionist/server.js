@@ -10,7 +10,7 @@
  *   Press 4 → Leave a voicemail / callback request
  */
 
-require('dotenv').config();
+require('dotenv').config({ path: require('path').join(__dirname, '.env') });
 const express       = require('express');
 const twilio        = require('twilio');
 const VoiceResponse = twilio.twiml.VoiceResponse;

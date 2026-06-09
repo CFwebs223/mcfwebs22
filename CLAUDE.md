@@ -1,3 +1,40 @@
+# LEADAPP — MCF Websites Client Acquisition System
+
+## Project Identity
+- **Project name:** LEADAPP
+- **Business:** MCF Websites — web design agency (Christopher + KV) targeting SA/US small businesses
+- **Root:** `/Users/mcfwebs/MCFwbes/`
+- **Obsidian vault:** `/Users/mcfwebs/Documents/LEADAPP/` (synced every 5min)
+
+## Critical Security Rules
+- ⛔ **NEVER message 0829291282** (Vinesh Murugan — Christopher's dad at FirstRand Group Tax)
+- ✅ WhatsApp reply handler only reads from leads tracker — personal messages are NEVER touched
+- 🔒 Never commit `marketing/leads/.env`
+
+## System Overview (13 PM2 processes)
+Run `pm2 status` to check. PM2 binary: `/Users/mcfwebs/.npm-global/bin/pm2`
+
+| Process | What it does | Schedule |
+|---|---|---|
+| mcf-engine | WhatsApp blast (3 numbers × 50 = 150/day) | 8am daily |
+| mcf-dashboard | Web dashboard port 4000 | always on |
+| mcf-tunnel | SSH tunnel for phone access | always on |
+| mcf-pusher | Pushes stats to Render | always on |
+| mcf-group-poster | Posts to 80+ FB groups | every 30min |
+| mcf-scraper | Scrapes new leads | every 6h |
+| mcf-cold-calls | Twilio outbound calls | Mon–Fri 9am |
+| mcf-keep-awake | Prevents Mac sleep | always on |
+| mcf-receptionist | AI phone receptionist | always on |
+| mcf-wa-status | WhatsApp Status post | 9am daily |
+| mcf-instagram | Instagram auto-post | 10am daily |
+| mcf-linkedin | LinkedIn auto-post | 11am daily |
+| mcf-obsidian-sync | Syncs LEADAPP vault | every 5min |
+
+## Chrome path
+`/Users/mcfwebs/.cache/puppeteer/chrome/mac_arm-149.0.7827.22/chrome-mac-arm64/Google Chrome for Testing.app/Contents/MacOS/Google Chrome for Testing`
+
+---
+
 # Ruflo — Claude Code Configuration
 
 ## Rules
