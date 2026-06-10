@@ -201,11 +201,51 @@ function reportResult(id, result) {
   req.end();
 }
 
+// ── Process health monitor — alerts Render if a critical process crashes ───────
+const CRITICAL = ['mcf-engine', 'mcf-pusher', 'mcf-receptionist'];
+let lastStatuses = {};
+
+function checkProcessHealth() {
+  execFile(PM2, ['jlist'], (err, stdout) => {
+    if (err) return;
+    try {
+      const procs = JSON.parse(stdout);
+      for (const proc of procs) {
+        if (!CRITICAL.includes(proc.name)) continue;
+        const wasOnline = lastStatuses[proc.name];
+        const isOnline  = proc.pm2_env?.status === 'online';
+        if (wasOnline === true && !isOnline) {
+          // Process just went down — report to Render for SMS alert
+          reportAlert(`⚠️ MCF ALERT: ${proc.name} has CRASHED on your Mac. Attempting restart... Check LEADAPP.`);
+          execFile(PM2, ['restart', proc.name], () => {});
+        }
+        lastStatuses[proc.name] = isOnline;
+      }
+    } catch {}
+  });
+}
+
+function reportAlert(message) {
+  const body = JSON.stringify({ alert: message });
+  const url  = new URL(RELAY_URL + '/alert');
+  const options = {
+    hostname: url.hostname, port: 443, path: url.pathname, method: 'POST',
+    headers: { 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body), 'x-relay-secret': RELAY_SECRET },
+  };
+  const req = http.request(options, () => {});
+  req.on('error', () => {});
+  req.write(body);
+  req.end();
+  console.log(`[Alert] ${message.slice(0, 80)}`);
+}
+
 console.log(`\n📡 MCF Stats Pusher started`);
 console.log(`   Pushing to: ${RELAY_URL}`);
-console.log(`   Stats: every 60s | Commands: every 30s\n`);
+console.log(`   Stats: every 60s | Commands: every 30s | Health: every 2min\n`);
 
 pushStats();
 pollCommands();
+checkProcessHealth();
 setInterval(pushStats, 60000);
 setInterval(pollCommands, 30000);
+setInterval(checkProcessHealth, 2 * 60 * 1000);

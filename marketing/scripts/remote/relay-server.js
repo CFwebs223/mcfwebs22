@@ -15,9 +15,50 @@ const path     = require('path');
 const app        = express();
 const httpServer = http.createServer(app);
 const io         = new Server(httpServer, { maxHttpBufferSize: 8e6, cors: { origin: '*' } });
-const PORT    = process.env.PORT || 3003;
-const SECRET  = process.env.RELAY_SECRET || 'mcf2026';
-const APP_PASS = process.env.APP_PASSWORD || 'Antigravity4321';
+const PORT         = process.env.PORT || 3003;
+const SECRET       = process.env.RELAY_SECRET || 'mcf2026';
+const APP_PASS     = process.env.APP_PASSWORD || 'Antigravity4321';
+const TWILIO_SID   = process.env.TWILIO_ACCOUNT_SID;
+const TWILIO_TOKEN = process.env.TWILIO_AUTH_TOKEN;
+const TWILIO_FROM  = process.env.TWILIO_PHONE_NUMBER || '+17406854315';
+const ALERT_TO     = process.env.REPORT_PHONE || '+27753203477';
+
+// ── Watchdog: alert Christopher via SMS if Mac goes offline ──────────────────
+let lastAlertSent = 0;
+const MAC_OFFLINE_MS    = 10 * 60 * 1000;  // alert if no push in 10 min
+const ALERT_COOLDOWN_MS = 60 * 60 * 1000;  // max 1 alert per hour
+
+function sendTwilioAlert(message) {
+  if (!TWILIO_SID || !TWILIO_TOKEN) return;
+  const body = `From=${encodeURIComponent(TWILIO_FROM)}&To=${encodeURIComponent(ALERT_TO)}&Body=${encodeURIComponent(message)}`;
+  const https = require('https');
+  const req = https.request({
+    hostname: 'api.twilio.com',
+    path: `/2010-04-01/Accounts/${TWILIO_SID}/Messages.json`,
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': 'Basic ' + Buffer.from(`${TWILIO_SID}:${TWILIO_TOKEN}`).toString('base64'),
+      'Content-Length': Buffer.byteLength(body),
+    },
+  }, (res) => { res.resume(); });
+  req.on('error', () => {});
+  req.write(body);
+  req.end();
+  console.log(`[Watchdog] Alert sent to ${ALERT_TO}: ${message.slice(0, 60)}`);
+}
+
+// Check every 3 minutes if Mac has gone silent
+setInterval(() => {
+  if (!lastUpdate) return;
+  const silentMs = Date.now() - new Date(lastUpdate).getTime();
+  const cooldownOk = (Date.now() - lastAlertSent) > ALERT_COOLDOWN_MS;
+  if (silentMs > MAC_OFFLINE_MS && cooldownOk) {
+    lastAlertSent = Date.now();
+    const mins = Math.round(silentMs / 60000);
+    sendTwilioAlert(`⚠️ MCF LEADAPP ALERT: Mac has been offline for ${mins} minutes. WhatsApp blasting is paused. Check your Mac. - LEADAPP Watchdog`);
+  }
+}, 3 * 60 * 1000);
 
 // ── WAVE: persistent data ─────────────────────────────────────────────────────
 const WAVE_DATA = '/tmp/wave-data.json';
@@ -80,6 +121,14 @@ app.post('/command', appAuth, (req, res) => {
   const id = Date.now().toString();
   commandQueue.push({ id, action, queuedAt: new Date().toISOString() });
   res.json({ ok: true, id, message: `${action} queued — Mac will execute within 30s` });
+});
+
+// ── Mac reports a problem — relay sends SMS to Christopher ───────────────────
+app.post('/alert', (req, res) => {
+  if (req.headers['x-relay-secret'] !== SECRET) return res.status(401).end();
+  const { alert } = req.body;
+  if (alert) sendTwilioAlert(alert);
+  res.json({ ok: true });
 });
 
 // ── Stats API ─────────────────────────────────────────────────────────────────

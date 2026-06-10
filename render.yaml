@@ -1,11 +1,15 @@
 services:
   - type: web
-    name: mcf-wave
+    name: mcf-stats-relay
     runtime: node
-    rootDir: apps/wave
+    rootDir: marketing/scripts/remote
     buildCommand: npm install
-    startCommand: node server.js
+    startCommand: node relay-server.js
     plan: free
     envVars:
       - key: NODE_ENV
         value: production
+      - key: RELAY_SECRET
+        value: mcf2026
+      - key: APP_PASSWORD
+        value: Antigravity4321
