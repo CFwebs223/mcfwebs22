@@ -5,11 +5,32 @@
  * Mac pushes stats every 60s. App works from any phone anywhere.
  */
 
-const express = require('express');
-const app     = express();
+const express  = require('express');
+const http     = require('http');
+const { Server } = require('socket.io');
+const crypto   = require('crypto');
+const fs       = require('fs');
+const path     = require('path');
+
+const app        = express();
+const httpServer = http.createServer(app);
+const io         = new Server(httpServer, { maxHttpBufferSize: 8e6, cors: { origin: '*' } });
 const PORT    = process.env.PORT || 3003;
 const SECRET  = process.env.RELAY_SECRET || 'mcf2026';
 const APP_PASS = process.env.APP_PASSWORD || 'Antigravity4321';
+
+// ── WAVE: persistent data ─────────────────────────────────────────────────────
+const WAVE_DATA = '/tmp/wave-data.json';
+let wdb = { users: {}, rooms: {} };
+try { wdb = JSON.parse(fs.readFileSync(WAVE_DATA, 'utf8')); } catch {}
+function waveSave() { try { fs.writeFileSync(WAVE_DATA, JSON.stringify(wdb)); } catch {} }
+const CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+function genCode(map) {
+  let c;
+  do { c = Array.from({ length: 6 }, () => CHARS[Math.floor(Math.random() * CHARS.length)]).join(''); }
+  while (map[c]);
+  return c;
+}
 
 app.use(express.json({ limit: '5mb' }));
 app.use(express.urlencoded({ extended: false }));
@@ -473,4 +494,123 @@ setInterval(load, 30000);
 </html>`);
 });
 
-app.listen(PORT, '0.0.0.0', () => console.log('MCF LEADAPP running on port ' + PORT));
+// ── WAVE: REST API ────────────────────────────────────────────────────────────
+app.post('/api/register', (req, res) => {
+  const { name, code } = req.body;
+  if (code && wdb.users[code]) return res.json(wdb.users[code]);
+  if (!name?.trim()) return res.status(400).json({ error: 'Name required' });
+  const u = { name: name.trim(), code: genCode(wdb.users), avatar: name.trim()[0].toUpperCase(), createdAt: Date.now() };
+  wdb.users[u.code] = u;
+  waveSave();
+  res.json(u);
+});
+
+app.get('/api/lookup/:code', (req, res) => {
+  const c = req.params.code.toUpperCase();
+  if (wdb.users[c]) return res.json({ type: 'user', ...wdb.users[c] });
+  if (wdb.rooms[c]) return res.json({ type: 'room', ...wdb.rooms[c], memberCount: wdb.rooms[c].members.length });
+  res.status(404).json({ error: 'Not found' });
+});
+
+// ── WAVE: frontend ────────────────────────────────────────────────────────────
+const WAVE_HTML = path.join(__dirname, 'wave.html');
+app.get('/wave', (req, res) => res.sendFile(WAVE_HTML));
+app.get('/wave/', (req, res) => res.sendFile(WAVE_HTML));
+
+// ── WAVE: Socket.io ───────────────────────────────────────────────────────────
+const waveOnline = {};
+
+io.on('connection', (sock) => {
+  let me = null;
+  const myRooms = new Set();
+
+  sock.on('auth', ({ code }) => {
+    const user = wdb.users[code];
+    if (!user) return sock.emit('error', 'Unknown code — please re-register');
+    me = user;
+    waveOnline[code] = sock.id;
+    for (const [rc, room] of Object.entries(wdb.rooms)) {
+      if (room.members.includes(code)) { sock.join(rc); myRooms.add(rc); }
+    }
+    const myRoomList = [...myRooms].map(rc => {
+      const r = wdb.rooms[rc];
+      return { ...r, messages: r.messages.slice(-60), memberDetails: r.members.map(c => wdb.users[c]).filter(Boolean) };
+    });
+    sock.emit('authed', { user, rooms: myRoomList });
+    for (const rc of myRooms) sock.to(rc).emit('presence', { code, online: true });
+  });
+
+  sock.on('join', ({ code: target, roomName, create }) => {
+    if (!me) return;
+    target = (target || '').trim().toUpperCase();
+    const emitJoined = (room) => {
+      sock.join(room.code); myRooms.add(room.code);
+      const memberDetails = room.members.map(c => wdb.users[c]).filter(Boolean);
+      sock.emit('room-joined', { ...room, messages: room.messages.slice(-60), memberDetails });
+    };
+    if (target && wdb.users[target] && target !== me.code) {
+      const dmCode = [me.code, target].sort().join('_');
+      if (!wdb.rooms[dmCode]) { wdb.rooms[dmCode] = { code: dmCode, type: 'dm', members: [me.code, target], messages: [] }; waveSave(); }
+      const room = wdb.rooms[dmCode];
+      if (!room.members.includes(me.code)) { room.members.push(me.code); waveSave(); }
+      emitJoined(room);
+      const otherSock = waveOnline[target];
+      if (otherSock) {
+        const memberDetails = room.members.map(c => wdb.users[c]).filter(Boolean);
+        io.to(otherSock).emit('room-joined', { ...room, messages: room.messages.slice(-60), memberDetails });
+      }
+      return;
+    }
+    if (target && wdb.rooms[target]) {
+      const room = wdb.rooms[target];
+      if (!room.members.includes(me.code)) { room.members.push(me.code); waveSave(); }
+      emitJoined(room);
+      const sys = { id: crypto.randomUUID(), type: 'sys', text: `${me.name} joined the room`, at: Date.now() };
+      room.messages.push(sys); waveSave();
+      sock.to(room.code).emit('sys', { roomCode: room.code, msg: sys });
+      return;
+    }
+    if (create) {
+      const rc = genCode(wdb.rooms);
+      const room = { code: rc, type: 'group', name: (roomName || 'New Room').trim(), members: [me.code], messages: [] };
+      wdb.rooms[rc] = room; waveSave();
+      emitJoined(room);
+      return;
+    }
+    sock.emit('join-error', target ? `"${target}" not found — check the code` : 'Enter a code or create a room');
+  });
+
+  sock.on('msg', ({ roomCode, text }) => {
+    if (!me || !text?.trim()) return;
+    const room = wdb.rooms[roomCode];
+    if (!room?.members.includes(me.code)) return;
+    const m = { id: crypto.randomUUID(), type: 'text', from: me.code, name: me.name, avatar: me.avatar, text: text.trim(), at: Date.now() };
+    room.messages.push(m);
+    if (room.messages.length > 400) room.messages = room.messages.slice(-400);
+    waveSave();
+    io.to(roomCode).emit('msg', { roomCode, msg: m });
+  });
+
+  sock.on('voice', ({ roomCode, audio, mimeType, duration }) => {
+    if (!me || !audio) return;
+    const room = wdb.rooms[roomCode];
+    if (!room?.members.includes(me.code)) return;
+    const m = { id: crypto.randomUUID(), type: 'voice', from: me.code, name: me.name, avatar: me.avatar, audio, mimeType: mimeType || 'audio/webm', duration: duration || 0, at: Date.now() };
+    room.messages.push(m);
+    if (room.messages.length > 400) room.messages = room.messages.slice(-400);
+    waveSave();
+    io.to(roomCode).emit('msg', { roomCode, msg: m });
+  });
+
+  sock.on('typing',    ({ roomCode, on })   => { if (me) sock.to(roomCode).emit('typing', { code: me.code, name: me.name, on }); });
+  sock.on('ptt-start', ({ roomCode })       => { if (me) sock.to(roomCode).emit('ptt-start', { code: me.code, name: me.name, roomCode }); });
+  sock.on('ptt-end',   ({ roomCode })       => { if (me) sock.to(roomCode).emit('ptt-end', { code: me.code, roomCode }); });
+
+  sock.on('disconnect', () => {
+    if (!me) return;
+    delete waveOnline[me.code];
+    for (const rc of myRooms) sock.to(rc).emit('presence', { code: me.code, online: false });
+  });
+});
+
+httpServer.listen(PORT, '0.0.0.0', () => console.log('MCF LEADAPP + WAVE running on port ' + PORT));
