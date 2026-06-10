@@ -27,19 +27,10 @@ const CALLER_ID    = process.env.TWILIO_PHONE || process.env.TWILIO_PHONE_NUMBER
 const LEADS_FILE   = path.join(__dirname, '../leads/leads-SA-US-no-website-2026-05-31.md');
 const TUNNEL_LOG   = path.join(__dirname, '../leads/tunnel.log');
 const CALL_TRACKER = path.join(__dirname, '../leads/call-tracker.json');
-const DELAY_MS     = 5000; // 5 seconds between calls
+const DELAY_MS     = 8000; // 8 seconds between calls
 
-// Read current tunnel URL from tunnel.log (auto-updated by mcf-tunnel PM2 process)
-function getTunnelUrl() {
-  try {
-    const lines = fs.readFileSync(TUNNEL_LOG, 'utf8').split('\n').filter(Boolean).reverse();
-    const line  = lines.find(l => l.includes('lhr.life'));
-    const match = line?.match(/https?:\/\/[a-z0-9\-]+\.lhr\.life/);
-    return match ? match[0] : null;
-  } catch { return null; }
-}
-
-const WEBHOOK_BASE = process.env.WEBHOOK_BASE || getTunnelUrl() || 'http://localhost:4000';
+// Use permanent Render relay for webhooks — no tunnel needed
+const WEBHOOK_BASE = process.env.WEBHOOK_BASE || 'https://mcf-stats-relay.onrender.com';
 
 // ── Parse leads (reuse same parser as whatsapp script) ───────────────────────
 function parseLeads() {

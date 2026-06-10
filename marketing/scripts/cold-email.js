@@ -26,8 +26,22 @@ const DAILY_LIMIT      = 50;
 const MIN_DELAY        = 8000;
 const MAX_DELAY        = 15000;
 
-const GMAIL_USER = process.env.GMAIL_USER || 'feletchristopher@gmail.com';
+const GMAIL_USER = process.env.GMAIL_USER || 'websitesmcf@gmail.com';
 const GMAIL_PASS = process.env.GMAIL_PASS || '';
+
+if (!GMAIL_PASS && !process.argv.includes('--stats') && !process.argv.includes('--preview')) {
+  console.error(`\n❌ Gmail App Password not set.\n`);
+  console.error(`   1. Open: https://myaccount.google.com/apppasswords`);
+  console.error(`      (sign in as websitesmcf@gmail.com / Antigravity4321)`);
+  console.error(`   2. Select app: Mail | Select device: Mac`);
+  console.error(`   3. Copy the 16-character password shown`);
+  console.error(`   4. Open this file in Terminal:`);
+  console.error(`      nano /Users/mcfwebs/MCFwbes/marketing/leads/.env`);
+  console.error(`   5. Replace the GMAIL_PASS= line with: GMAIL_PASS=xxxx xxxx xxxx xxxx`);
+  console.error(`   6. Save and run this script again.\n`);
+  console.error(`   NOTE: 2-Step Verification must be ON for websitesmcf@gmail.com first.\n`);
+  process.exit(1);
+}
 
 // ── Email templates ────────────────────────────────────────────────────────────
 const SUBJECTS = [

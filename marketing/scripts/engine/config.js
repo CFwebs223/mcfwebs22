@@ -10,9 +10,9 @@ module.exports = {
   SESSION_1:     path.join(ROOT, 'sessions/wa-number-1'),  // primary number
   SESSION_2:     path.join(ROOT, 'sessions/wa-number-2'),  // second number
   SESSION_3:     path.join(ROOT, 'sessions/wa-number-3'),  // third number
-  DAILY_LIMIT:   50,   // per number (150 total with 3 numbers)
-  MIN_DELAY:     45000,
-  MAX_DELAY:     90000,
+  DAILY_LIMIT:   15,    // per number — stay safe from WA bans
+  MIN_DELAY:     180000, // 3 min minimum between messages
+  MAX_DELAY:     480000, // up to 8 min — human-like pacing
   FOLLOWUP_1_MS: 2  * 60 * 60 * 1000,  // 2 hours
   FOLLOWUP_2_MS: 5  * 60 * 60 * 1000,  // 5 hours
   SEND_HOUR:     8,

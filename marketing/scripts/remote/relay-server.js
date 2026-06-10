@@ -69,6 +69,51 @@ app.get('/stats', appAuth, (req, res) => {
 
 app.get('/health', (req, res) => res.json({ ok: true, hasData: !!latestStats }));
 
+// ── Twilio cold call TwiML webhooks (permanent URL, no tunnel needed) ─────────
+const CALL_FWD = process.env.CALL_FWD_NUMBER || '+27753203477'; // Christopher
+
+app.post('/cold/answer', (req, res) => {
+  res.setHeader('Content-Type', 'text/xml');
+  res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Gather action="/cold/keypress" numDigits="1" timeout="8">
+    <Say voice="Polly.Ayanda-Neural" language="en-ZA">
+      Hi! This is a quick call from M C F Websites.
+      We build professional websites for businesses like yours, starting from R 2500 once-off.
+      No monthly fees. We build it first — you only pay if you love it.
+      Press 1 to speak with Christopher now.
+      Press 2 to receive details on WhatsApp.
+      Press 3 to be removed from our list.
+    </Say>
+  </Gather>
+  <Say voice="Polly.Ayanda-Neural" language="en-ZA">No problem! Have a great day.</Say>
+</Response>`);
+});
+
+app.post('/cold/keypress', (req, res) => {
+  const digit = req.body.Digits;
+  res.setHeader('Content-Type', 'text/xml');
+  if (digit === '1') {
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Ayanda-Neural" language="en-ZA">Connecting you now. One moment please.</Say>
+  <Dial callerId="${CALL_FWD}">${CALL_FWD}</Dial>
+</Response>`);
+  } else if (digit === '2') {
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Ayanda-Neural" language="en-ZA">Perfect! We'll send you the details on WhatsApp now. Have a great day!</Say>
+</Response>`);
+  } else {
+    res.send(`<?xml version="1.0" encoding="UTF-8"?>
+<Response>
+  <Say voice="Polly.Ayanda-Neural" language="en-ZA">No problem. You won't hear from us again. Have a wonderful day!</Say>
+</Response>`);
+  }
+});
+
+app.post('/cold/status', (req, res) => { res.sendStatus(204); });
+
 // ── PWA manifest ──────────────────────────────────────────────────────────────
 app.get('/manifest.json', (req, res) => {
   res.json({
