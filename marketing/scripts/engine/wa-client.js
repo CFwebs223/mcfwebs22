@@ -2,6 +2,10 @@ const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { CHROME } = require('./config');
 const tracker = require('./tracker');
+const landon  = require('./landon-agent');
+
+// Conversation history per phone (in-memory, reset on restart — good enough)
+const convHistory = {};
 
 function createClient(sessionPath, number = 1) {
   const client = new Client({
@@ -38,37 +42,54 @@ function createClient(sessionPath, number = 1) {
     client.initialize();
   });
 
-  // ── Reply detection — only checks leads, never reads personal messages ────
+  // ── Reply handler — ONLY leads, NEVER personal messages ─────────────────
   client.on('message', async (msg) => {
     if (msg.fromMe) return;
     const phone = '+' + msg.from.replace('@c.us', '').replace(/\D/g, '');
+
+    // ⛔ SECURITY: only respond to leads in tracker — personal messages NEVER touched
     const t = tracker.load();
-    if (!t[phone]) return; // not a lead — ignore completely
+    if (!t[phone]) return;
 
-    const name = t[phone].name || 'there';
+    const lead = { ...t[phone], phone };
+    const text = msg.body || '';
 
+    // Mark as replied (first time)
     if (!t[phone].replied) {
       tracker.markReplied(t, phone);
-      console.log(`\n🎉 REPLY from ${name} (${phone}) on number ${number}!`);
+      console.log(`\n🎉 REPLY from ${lead.name || phone} on WA#${number}: "${text.slice(0,60)}"`);
+    } else {
+      console.log(`\n💬 Follow-up from ${lead.name || phone}: "${text.slice(0,60)}"`);
     }
 
-    // Send auto-reply once only — leads only, never personal messages
-    if (!t[phone].autoReplied) {
-      try {
-        const reply =
-          `Hi ${name}! 😊 Thanks for getting back to me.\n\n` +
-          `KV or Christopher from *MCF Websites* will personally call you ` +
-          `within the hour to chat about your website.\n\n` +
-          `In the meantime, feel free to WhatsApp us directly:\n` +
-          `📞 075 320 3477\n` +
-          `🌐 https://www.mcfwebs.agency`;
-        await client.sendMessage(msg.from, reply);
+    // Build conversation history for this lead
+    if (!convHistory[phone]) convHistory[phone] = [];
+    convHistory[phone].push({ role: 'user', text });
+    // Keep last 10 exchanges
+    if (convHistory[phone].length > 20) convHistory[phone] = convHistory[phone].slice(-20);
+
+    // Random human-like delay before replying (3–12 seconds)
+    const replyDelay = 3000 + Math.random() * 9000;
+    await new Promise(r => setTimeout(r, replyDelay));
+
+    try {
+      const reply = await landon.getLandonReply(lead, text, convHistory[phone]);
+      if (!reply) return;
+
+      await client.sendMessage(msg.from, reply);
+
+      // Record in history
+      convHistory[phone].push({ role: 'landon', text: reply });
+
+      // Mark auto-replied (first reply)
+      if (!t[phone].autoReplied) {
         const fresh = tracker.load();
         tracker.markAutoReplied(fresh, phone);
-        console.log(`   ↩️  Auto-reply sent to ${name}`);
-      } catch (err) {
-        console.log(`   ⚠️  Auto-reply failed: ${err.message}`);
       }
+
+      console.log(`   💬 Landon replied: "${reply.slice(0,80)}..."`);
+    } catch (err) {
+      console.log(`   ⚠️  Landon reply failed: ${err.message}`);
     }
   });
 

@@ -177,7 +177,21 @@ module.exports = {
       env: { NODE_ENV: 'production', PORT: '5500' },
     },
 
-    // ── 11. Stats Pusher (pushes data to Render every 60s for phone monitoring) ─
+    // ── 11. Hourly Report — WhatsApp + email report every hour ───────────────────
+    {
+      name:         'mcf-hourly-report',
+      script:       'marketing/scripts/hourly-report.js',
+      cwd:          '/Users/mcfwebs/MCFwbes',
+      autorestart:  false,
+      watch:        false,
+      cron_restart: '0 * * * *',  // every hour on the hour
+      log_file:     'marketing/leads/report.log',
+      error_file:   'marketing/leads/report-error.log',
+      env_file:     'marketing/leads/.env',
+      env: { NODE_ENV: 'production' },
+    },
+
+    // ── 12. Stats Pusher (pushes data to Render every 60s for phone monitoring) ─
     {
       name:         'mcf-pusher',
       script:       'marketing/scripts/remote/stats-pusher.js',
