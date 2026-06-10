@@ -55,3 +55,8 @@ marketing/leads/tunnel.log
 
 # Marketing — generated/runtime
 marketing/images/
+
+# App node_modules and runtime data
+apps/*/node_modules/
+apps/*/data.json
+apps/*/*.log
