@@ -10,11 +10,12 @@ module.exports = {
   SESSION_1:     path.join(ROOT, 'sessions/wa-number-1'),  // primary number
   SESSION_2:     path.join(ROOT, 'sessions/wa-number-2'),  // second number
   SESSION_3:     path.join(ROOT, 'sessions/wa-number-3'),  // third number
-  DAILY_LIMIT:   15,    // per number — stay safe from WA bans
+  DAILY_LIMIT:   20,    // per number — 3 numbers = 60/day
   MIN_DELAY:     180000, // 3 min minimum between messages
-  MAX_DELAY:     480000, // up to 8 min — human-like pacing
-  FOLLOWUP_1_MS: 2  * 60 * 60 * 1000,  // 2 hours
-  FOLLOWUP_2_MS: 5  * 60 * 60 * 1000,  // 5 hours
+  MAX_DELAY:     420000, // up to 7 min — human-like pacing
+  FOLLOWUP_1_MS: 4  * 60 * 60 * 1000,  // 4 hours
+  FOLLOWUP_2_MS: 24 * 60 * 60 * 1000,  // 24 hours (next day)
+  FOLLOWUP_3_MS: 72 * 60 * 60 * 1000,  // 72 hours (3 days)
   SEND_HOUR:     8,
   BUSINESS_NAME: 'MCF Websites',
   CEO_PHONE:     '0753203477',

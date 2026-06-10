@@ -15,48 +15,83 @@ const TRACKER    = path.join(__dirname, '../leads/scraper-tracker.json');
 const LOG_FILE   = path.join(__dirname, '../leads/auto-scraper.log');
 const DRY_RUN    = process.argv.includes('--dry');
 
-// All categories to scrape — cycles through one batch per run
-const ALL_TARGETS = [
-  // Professional services (new)
-  { city: 'CAPE TOWN',    slug: 'dentists/cape-town',           cat: 'Dentists' },
-  { city: 'CAPE TOWN',    slug: 'general-practitioners/cape-town', cat: 'Doctors' },
-  { city: 'CAPE TOWN',    slug: 'attorneys/cape-town',          cat: 'Attorneys' },
-  { city: 'CAPE TOWN',    slug: 'physiotherapists/cape-town',   cat: 'Physiotherapists' },
-  { city: 'CAPE TOWN',    slug: 'optometrists/cape-town',       cat: 'Optometrists' },
-  { city: 'CAPE TOWN',    slug: 'veterinarians/cape-town',      cat: 'Vets' },
-  { city: 'CAPE TOWN',    slug: 'accountants/cape-town',        cat: 'Accountants' },
-  { city: 'CAPE TOWN',    slug: 'beauty-salons/cape-town',      cat: 'Beauty Salons' },
-  { city: 'CAPE TOWN',    slug: 'hair-salons/cape-town',        cat: 'Hair Salons' },
-  { city: 'CAPE TOWN',    slug: 'driving-schools/cape-town',    cat: 'Driving Schools' },
-  { city: 'CAPE TOWN',    slug: 'tutoring/cape-town',           cat: 'Tutors' },
-  { city: 'CAPE TOWN',    slug: 'catering/cape-town',           cat: 'Catering' },
-  { city: 'CAPE TOWN',    slug: 'photography/cape-town',        cat: 'Photographers' },
-  // JHB professional
-  { city: 'JOHANNESBURG', slug: 'dentists/johannesburg',        cat: 'Dentists' },
-  { city: 'JOHANNESBURG', slug: 'general-practitioners/johannesburg', cat: 'Doctors' },
-  { city: 'JOHANNESBURG', slug: 'attorneys/johannesburg',       cat: 'Attorneys' },
-  { city: 'JOHANNESBURG', slug: 'beauty-salons/johannesburg',   cat: 'Beauty Salons' },
-  { city: 'JOHANNESBURG', slug: 'accountants/johannesburg',     cat: 'Accountants' },
-  { city: 'JOHANNESBURG', slug: 'catering/johannesburg',        cat: 'Catering' },
-  { city: 'JOHANNESBURG', slug: 'photography/johannesburg',     cat: 'Photographers' },
-  // Pretoria
-  { city: 'PRETORIA',     slug: 'dentists/pretoria',            cat: 'Dentists' },
-  { city: 'PRETORIA',     slug: 'general-practitioners/pretoria', cat: 'Doctors' },
-  { city: 'PRETORIA',     slug: 'beauty-salons/pretoria',       cat: 'Beauty Salons' },
-  // Durban
-  { city: 'DURBAN',       slug: 'dentists/durban',              cat: 'Dentists' },
-  { city: 'DURBAN',       slug: 'general-practitioners/durban', cat: 'Doctors' },
-  { city: 'DURBAN',       slug: 'beauty-salons/durban',         cat: 'Beauty Salons' },
-  // More CT trades (fill gaps)
-  { city: 'CAPE TOWN',    slug: 'solar-energy/cape-town',       cat: 'Solar Installers' },
-  { city: 'CAPE TOWN',    slug: 'security-companies/cape-town', cat: 'Security' },
-  { city: 'CAPE TOWN',    slug: 'gym-fitness/cape-town',        cat: 'Gyms' },
-  { city: 'JOHANNESBURG', slug: 'solar-energy/johannesburg',    cat: 'Solar Installers' },
-  { city: 'JOHANNESBURG', slug: 'security-companies/johannesburg', cat: 'Security' },
+// SA cities and categories — massive coverage
+const CITIES = [
+  'cape-town','johannesburg','pretoria','durban','port-elizabeth',
+  'bloemfontein','east-london','nelspruit','polokwane','rustenburg',
+  'kimberley','pietermaritzburg','george','stellenbosch','centurion',
+  'sandton','randburg','roodepoort','paarl','witbank',
+];
+const CITY_LABELS = {
+  'cape-town':'CAPE TOWN','johannesburg':'JOHANNESBURG','pretoria':'PRETORIA',
+  'durban':'DURBAN','port-elizabeth':'PORT ELIZABETH','bloemfontein':'BLOEMFONTEIN',
+  'east-london':'EAST LONDON','nelspruit':'NELSPRUIT','polokwane':'POLOKWANE',
+  'rustenburg':'RUSTENBURG','kimberley':'KIMBERLEY','pietermaritzburg':'PIETERMARITZBURG',
+  'george':'GEORGE','stellenbosch':'STELLENBOSCH','centurion':'CENTURION',
+  'sandton':'SANDTON','randburg':'RANDBURG','roodepoort':'ROODEPOORT',
+  'paarl':'PAARL','witbank':'WITBANK',
+};
+const CATEGORIES = [
+  { slug: 'plumbers',               cat: 'Plumbers' },
+  { slug: 'electricians',           cat: 'Electricians' },
+  { slug: 'painters-decorators',    cat: 'Painters' },
+  { slug: 'roofers',                cat: 'Roofers' },
+  { slug: 'tilers',                 cat: 'Tilers' },
+  { slug: 'carpenters',             cat: 'Carpenters' },
+  { slug: 'pest-control',           cat: 'Pest Control' },
+  { slug: 'cleaning-services',      cat: 'Cleaning' },
+  { slug: 'security-companies',     cat: 'Security' },
+  { slug: 'locksmiths',             cat: 'Locksmiths' },
+  { slug: 'pool-services',          cat: 'Pool Services' },
+  { slug: 'garden-services',        cat: 'Gardening' },
+  { slug: 'movers',                 cat: 'Movers' },
+  { slug: 'air-conditioning',       cat: 'Aircon' },
+  { slug: 'solar-energy',           cat: 'Solar' },
+  { slug: 'handyman',               cat: 'Handyman' },
+  { slug: 'builders',               cat: 'Builders' },
+  { slug: 'restaurants',            cat: 'Restaurants' },
+  { slug: 'cafes',                  cat: 'Cafes' },
+  { slug: 'takeaways',              cat: 'Takeaways' },
+  { slug: 'catering',               cat: 'Catering' },
+  { slug: 'bakeries',               cat: 'Bakeries' },
+  { slug: 'butchers',               cat: 'Butchers' },
+  { slug: 'hair-salons',            cat: 'Hair Salons' },
+  { slug: 'barbershops',            cat: 'Barbershops' },
+  { slug: 'beauty-salons',          cat: 'Beauty Salons' },
+  { slug: 'nail-salons',            cat: 'Nail Salons' },
+  { slug: 'spas',                   cat: 'Spas' },
+  { slug: 'physiotherapists',       cat: 'Physiotherapy' },
+  { slug: 'chiropractors',          cat: 'Chiropractors' },
+  { slug: 'dentists',               cat: 'Dentists' },
+  { slug: 'general-practitioners',  cat: 'Doctors' },
+  { slug: 'optometrists',           cat: 'Optometrists' },
+  { slug: 'veterinarians',          cat: 'Vets' },
+  { slug: 'mechanics',              cat: 'Mechanics' },
+  { slug: 'panel-beaters',          cat: 'Panel Beaters' },
+  { slug: 'tyre-fitment',           cat: 'Tyres' },
+  { slug: 'car-wash',               cat: 'Car Wash' },
+  { slug: 'attorneys',              cat: 'Attorneys' },
+  { slug: 'accountants',            cat: 'Accountants' },
+  { slug: 'driving-schools',        cat: 'Driving Schools' },
+  { slug: 'tutors',                 cat: 'Tutors' },
+  { slug: 'gyms',                   cat: 'Gyms' },
+  { slug: 'event-planners',         cat: 'Events' },
+  { slug: 'photographers',          cat: 'Photographers' },
+  { slug: 'florists',               cat: 'Florists' },
+  { slug: 'pet-groomers',           cat: 'Pet Grooming' },
+  { slug: 'estate-agents',          cat: 'Estate Agents' },
 ];
 
-// How many targets to scrape per run (spread load across 6h cycles)
-const BATCH_SIZE = 5;
+// Build full target list from all city × category combinations
+const ALL_TARGETS = [];
+for (const city of CITIES) {
+  for (const cat of CATEGORIES) {
+    ALL_TARGETS.push({ city: CITY_LABELS[city], slug: `${cat.slug}/${city}`, cat: cat.cat });
+  }
+}
+
+// How many targets to scrape per run
+const BATCH_SIZE = 8;
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
 function log(msg)  {

@@ -75,7 +75,7 @@ app.post('/command-result', (req, res) => {
 // ── App sends commands ────────────────────────────────────────────────────────
 app.post('/command', appAuth, (req, res) => {
   const { action } = req.body;
-  const allowed = ['run-engine','stop-engine','run-poster','run-scraper','run-calls'];
+  const allowed = ['run-engine','stop-engine','run-poster','run-scraper','run-calls','run-instagram','run-linkedin','run-wa-status','run-followups','run-report','restart-all','status'];
   if (!allowed.includes(action)) return res.status(400).json({ error: 'Unknown action' });
   const id = Date.now().toString();
   commandQueue.push({ id, action, queuedAt: new Date().toISOString() });
@@ -281,14 +281,18 @@ html,body{height:100%;background:#0a0a0f;color:#e0e0e0;font-family:-apple-system
       <div class="upd" id="upd">Loading...</div>
       <div class="grid">
         <div class="card"><div class="lbl">Sent Today</div><div class="val g" id="st">—</div></div>
-        <div class="card"><div class="lbl">Total Sent</div><div class="val b" id="ts">—</div></div>
         <div class="card"><div class="lbl">🎉 Replies</div><div class="val y" id="rep">—</div></div>
+        <div class="card"><div class="lbl">Replied Today</div><div class="val y" id="rept">—</div></div>
       </div>
-      <div class="grid grid2">
+      <div class="grid">
+        <div class="card"><div class="lbl">Total Sent</div><div class="val b" id="ts">—</div></div>
         <div class="card"><div class="lbl">Leads Left</div><div class="val" id="uns">—</div><div class="sub" id="tot"></div></div>
+        <div class="card"><div class="lbl">Converted</div><div class="val g" id="conv">—</div></div>
+      </div>
+      <div class="grid">
         <div class="card"><div class="lbl">Groups Today</div><div class="val b" id="grp">—</div></div>
-        <div class="card"><div class="lbl">Follow-up 1</div><div class="val" id="fu1">—</div></div>
-        <div class="card"><div class="lbl">Follow-up 2</div><div class="val" id="fu2">—</div></div>
+        <div class="card"><div class="lbl">Calls Today</div><div class="val" id="calls">—</div></div>
+        <div class="card"><div class="lbl">Follow-ups</div><div class="val" id="fu1">—</div><div class="sub" id="fu2"></div></div>
       </div>
       <div class="sec" id="reply-sec" style="display:none">
         <div class="sec-title">🎉 Replies — Call These People Now!</div>
@@ -317,10 +321,15 @@ html,body{height:100%;background:#0a0a0f;color:#e0e0e0;font-family:-apple-system
     <div class="tab-content" id="tab-control">
       <div class="section-hdr">System Control</div>
       <button class="btn green" onclick="cmd('run-engine')">▶️ Run WhatsApp Blast Now</button>
+      <button class="btn gray" onclick="cmd('run-followups')">🔄 Run Follow-ups Now</button>
       <button class="btn red" onclick="cmd('stop-engine')">⏹ Stop Engine</button>
       <button class="btn purple" onclick="cmd('run-poster')">📢 Post to Facebook Groups Now</button>
       <button class="btn orange" onclick="cmd('run-calls')">📞 Run Cold Calls Now</button>
       <button class="btn blue" onclick="cmd('run-scraper')">🔍 Scrape New Leads Now</button>
+      <button class="btn purple" onclick="cmd('run-instagram')">📸 Post to Instagram Now</button>
+      <button class="btn blue" onclick="cmd('run-linkedin')">💼 Post to LinkedIn Now</button>
+      <button class="btn green" onclick="cmd('run-wa-status')">📱 Post WhatsApp Status Now</button>
+      <button class="btn gray" onclick="cmd('run-report')">📊 Send Hourly Report Now</button>
       <div class="sec" style="margin-top:16px">
         <div class="sec-title">Business Info</div>
         <div class="info-row"><span class="info-key">Business</span><span class="info-val">MCF Websites</span></div>
@@ -415,14 +424,17 @@ function render(d) {
   const isStandby  = e.running === 'standby';
   document.getElementById('dot').className = 'pulse' + (isBlasting ? '' : ' off');
   document.getElementById('btext').textContent = isBlasting ? '🔥 Blasting now' : isStandby ? '✅ Online — standby' : 'Engine offline';
-  document.getElementById('st').textContent = e.sentToday ?? '—';
-  document.getElementById('ts').textContent = e.totalSent ?? '—';
-  document.getElementById('rep').textContent = e.replied ?? '—';
-  document.getElementById('fu1').textContent = e.fu1 ?? '—';
-  document.getElementById('fu2').textContent = e.fu2 ?? '—';
-  document.getElementById('uns').textContent = l.unsent ?? '—';
-  document.getElementById('tot').textContent = 'of ' + (l.total ?? '?') + ' total';
-  document.getElementById('grp').textContent = g.postedToday ?? '—';
+  document.getElementById('st').textContent   = e.sentToday ?? '—';
+  document.getElementById('ts').textContent   = e.totalSent ?? '—';
+  document.getElementById('rep').textContent  = e.replied ?? '—';
+  document.getElementById('rept').textContent = e.repliedToday ?? '—';
+  document.getElementById('conv').textContent = e.converted ?? '—';
+  document.getElementById('fu1').textContent  = 'FU1: ' + (e.fu1 ?? '—') + ' FU2: ' + (e.fu2 ?? '—');
+  document.getElementById('fu2').textContent  = 'FU3: ' + (e.fu3 ?? '—');
+  document.getElementById('uns').textContent  = l.unsent ?? '—';
+  document.getElementById('tot').textContent  = 'of ' + (l.total ?? '?') + ' total';
+  document.getElementById('grp').textContent  = g.postedToday ?? '—';
+  document.getElementById('calls').textContent = (d.calls?.today ?? '—');
   document.getElementById('upd').textContent = 'Updated: ' + new Date(d.lastUpdate || Date.now()).toLocaleTimeString();
 
   if (d.replies && d.replies.length) {

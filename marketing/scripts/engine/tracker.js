@@ -22,6 +22,7 @@ function markSent(tracker, lead, sentBy = 1) {
     replied:       false,
     followUp1Sent: false,
     followUp2Sent: false,
+    followUp3Sent: false,
   };
   save(tracker);
 }
@@ -59,6 +60,13 @@ function markFollowup2(tracker, phone) {
   save(tracker);
 }
 
+function markFollowup3(tracker, phone) {
+  if (!tracker[phone]) return;
+  tracker[phone].followUp3Sent   = true;
+  tracker[phone].followUp3SentAt = new Date().toISOString();
+  save(tracker);
+}
+
 function todaySentCount(tracker) {
   const today = new Date().toISOString().slice(0, 10);
   return Object.values(tracker).filter(v => v.sentAt?.startsWith(today) && v.status === 'sent').length;
@@ -80,6 +88,14 @@ function needsFollowup2(tracker, now = Date.now()) {
   ).map(([phone, v]) => ({ phone, ...v }));
 }
 
+function needsFollowup3(tracker, now = Date.now()) {
+  const { FOLLOWUP_3_MS } = require('./config');
+  return Object.entries(tracker).filter(([phone, v]) =>
+    v.status === 'sent' && !v.replied && v.followUp2Sent && !v.followUp3Sent &&
+    (now - new Date(v.sentAt).getTime()) >= FOLLOWUP_3_MS
+  ).map(([phone, v]) => ({ phone, ...v }));
+}
+
 function stats(tracker) {
   const vals = Object.values(tracker);
   return {
@@ -89,8 +105,10 @@ function stats(tracker) {
     replied:  vals.filter(v => v.replied).length,
     followup1: vals.filter(v => v.followUp1Sent).length,
     followup2: vals.filter(v => v.followUp2Sent).length,
+    followup3: vals.filter(v => v.followUp3Sent).length,
+    converted: vals.filter(v => v.converted).length,
     sentToday: todaySentCount(tracker),
   };
 }
 
-module.exports = { load, save, markSent, markFailed, markReplied, markAutoReplied, markFollowup1, markFollowup2, todaySentCount, needsFollowup1, needsFollowup2, stats };
+module.exports = { load, save, markSent, markFailed, markReplied, markAutoReplied, markFollowup1, markFollowup2, markFollowup3, todaySentCount, needsFollowup1, needsFollowup2, needsFollowup3, stats };

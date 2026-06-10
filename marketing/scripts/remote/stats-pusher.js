@@ -12,11 +12,13 @@ const { execFile } = require('child_process');
 
 const PM2 = process.env.PM2_BIN || '/Users/mcfwebs/.npm-global/bin/pm2';
 
-const TRACKER_FILE  = path.join(__dirname, '../../leads/engine-tracker.json');
-const LEADS_FILE    = path.join(__dirname, '../../leads/leads-SA-US-no-website-2026-05-31.md');
-const GROUP_TRACKER = path.join(__dirname, '../../leads/group-tracker.json');
-const LOCK_FILE     = path.join(__dirname, '../../../leads/engine.lock');
-const TUNNEL_LOG    = path.join(__dirname, '../../leads/tunnel.log');
+const TRACKER_FILE   = path.join(__dirname, '../../leads/engine-tracker.json');
+const LEADS_FILE     = path.join(__dirname, '../../leads/leads-SA-US-no-website-2026-05-31.md');
+const GROUP_TRACKER  = path.join(__dirname, '../../leads/group-tracker.json');
+const CALL_TRACKER   = path.join(__dirname, '../../leads/call-tracker.json');
+const REPORT_FILE    = path.join(__dirname, '../../leads/last-report.json');
+const LOCK_FILE      = path.join(__dirname, '../../../leads/engine.lock');
+const TUNNEL_LOG     = path.join(__dirname, '../../leads/tunnel.log');
 
 function getTunnelUrl() {
   try {
@@ -47,39 +49,57 @@ function buildStats() {
       .filter(l => /^\|\s*[^-]/.test(l) && !l.includes('Business') && !l.includes('Phone')).length;
   }
 
-  const totalSent = vals.filter(v => v.status === 'sent').length;
-  const failed    = vals.filter(v => v.status === 'failed').length;
-  const replied   = vals.filter(v => v.replied).length;
-  const fu1       = vals.filter(v => v.followUp1Sent).length;
-  const fu2       = vals.filter(v => v.followUp2Sent).length;
-  const unsent    = Math.max(0, totalLeads - totalSent - failed);
-  const blasting  = fs.existsSync(LOCK_FILE);
-  // Check if engine PM2 process is actually online
-  const running   = blasting ? 'blasting' : 'standby';
+  const totalSent     = vals.filter(v => v.status === 'sent').length;
+  const failed        = vals.filter(v => v.status === 'failed').length;
+  const replied       = vals.filter(v => v.replied).length;
+  const repliedToday  = vals.filter(v => v.repliedAt?.startsWith(today)).length;
+  const converted     = vals.filter(v => v.converted).length;
+  const fu1           = vals.filter(v => v.followUp1Sent).length;
+  const fu2           = vals.filter(v => v.followUp2Sent).length;
+  const fu3           = vals.filter(v => v.followUp3Sent).length;
+  const unsent        = Math.max(0, totalLeads - totalSent - failed);
+  const running       = fs.existsSync(LOCK_FILE) ? 'blasting' : 'standby';
 
   const groupTracker = fs.existsSync(GROUP_TRACKER)
-    ? JSON.parse(fs.readFileSync(GROUP_TRACKER, 'utf8'))
-    : {};
-  const groupsToday = Object.values(groupTracker).filter(v => v.lastPosted?.startsWith(today)).length;
+    ? JSON.parse(fs.readFileSync(GROUP_TRACKER, 'utf8')) : {};
+  const groupsToday  = Object.values(groupTracker).filter(v => v.lastPosted?.startsWith(today)).length;
+
+  const callTracker  = fs.existsSync(CALL_TRACKER)
+    ? JSON.parse(fs.readFileSync(CALL_TRACKER, 'utf8')) : {};
+  const callsToday   = Object.values(callTracker).filter(v => v.calledAt?.startsWith(today)).length;
 
   const replies = Object.entries(tracker)
     .filter(([, v]) => v.replied)
-    .map(([phone, v]) => ({ phone, name: v.name, repliedAt: v.repliedAt, city: v.city, category: v.category }))
+    .map(([phone, v]) => ({ phone, name: v.name, repliedAt: v.repliedAt, city: v.city, category: v.category, converted: v.converted }))
     .sort((a, b) => new Date(b.repliedAt) - new Date(a.repliedAt))
-    .slice(0, 10);
+    .slice(0, 20);
 
   const activity = Object.entries(tracker)
     .map(([phone, v]) => ({ phone, ...v }))
-    .sort((a, b) => new Date(b.sentAt) - new Date(a.sentAt))
-    .slice(0, 30);
+    .sort((a, b) => new Date(b.sentAt || 0) - new Date(a.sentAt || 0))
+    .slice(0, 50);
+
+  // Get hot leads (replied, not converted)
+  const hotLeads = Object.entries(tracker)
+    .filter(([, v]) => v.replied && !v.converted)
+    .map(([phone, v]) => ({ phone, name: v.name, city: v.city, category: v.category, repliedAt: v.repliedAt }))
+    .sort((a, b) => new Date(b.repliedAt) - new Date(a.repliedAt))
+    .slice(0, 10);
+
+  // Last hourly report
+  let lastReport = null;
+  try { lastReport = JSON.parse(fs.readFileSync(REPORT_FILE, 'utf8')); } catch {}
 
   return {
-    engine:    { running, blasting, sentToday, totalSent, failed, replied, fu1, fu2 },
-    leads:     { total: totalLeads, unsent, sent: totalSent, failed },
-    groups:    { postedToday: groupsToday },
-    tunnelUrl: getTunnelUrl(),
+    engine:     { running, sentToday, totalSent, failed, replied, repliedToday, converted, fu1, fu2, fu3 },
+    leads:      { total: totalLeads, unsent, sent: totalSent, failed },
+    groups:     { postedToday: groupsToday, total: Object.keys(groupTracker).length },
+    calls:      { today: callsToday },
+    tunnelUrl:  getTunnelUrl(),
     replies,
     activity,
+    hotLeads,
+    lastReport,
   };
 }
 
@@ -122,11 +142,18 @@ function pushStats() {
 
 // ── Command executor ─────────────────────────────────────────────────────────
 const PM2_CMDS = {
-  'run-engine':   [PM2, ['restart', 'mcf-engine']],
-  'stop-engine':  [PM2, ['stop',    'mcf-engine']],
-  'run-poster':   [PM2, ['restart', 'mcf-group-poster']],
-  'run-scraper':  [PM2, ['restart', 'mcf-scraper']],
-  'run-calls':    [PM2, ['restart', 'mcf-cold-calls']],
+  'run-engine':       [PM2, ['restart', 'mcf-engine']],
+  'stop-engine':      [PM2, ['stop',    'mcf-engine']],
+  'run-poster':       [PM2, ['restart', 'mcf-group-poster']],
+  'run-scraper':      [PM2, ['restart', 'mcf-scraper']],
+  'run-calls':        [PM2, ['restart', 'mcf-cold-calls']],
+  'run-instagram':    [PM2, ['restart', 'mcf-instagram']],
+  'run-linkedin':     [PM2, ['restart', 'mcf-linkedin']],
+  'run-wa-status':    [PM2, ['restart', 'mcf-wa-status']],
+  'run-followups':    [PM2, ['restart', 'mcf-engine', '--', '--followups']],
+  'run-report':       [PM2, ['restart', 'mcf-hourly-report']],
+  'restart-all':      [PM2, ['restart', 'all']],
+  'status':           [PM2, ['jlist']],
 };
 
 function pollCommands() {

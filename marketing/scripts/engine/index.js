@@ -81,21 +81,20 @@ async function sendBatch(client, leads, trackerRef, sentByNum, sessionPath) {
 
 // ── Follow-up sender ───────────────────────────────────────────────────────────
 async function runFollowups(client, clientNum = 1) {
-  const t = trk.load();
+  const t   = trk.load();
   const fu1 = trk.needsFollowup1(t);
   const fu2 = trk.needsFollowup2(t);
+  const fu3 = trk.needsFollowup3(t);
 
-  console.log(`\n📬 Follow-ups due: ${fu1.length} (2h) + ${fu2.length} (5h)`);
+  console.log(`\n📬 Follow-ups due: ${fu1.length} (4h) + ${fu2.length} (24h) + ${fu3.length} (72h)`);
 
   for (const lead of fu1) {
     try {
       await send(client, lead.phone, msgs.getFollowup1(lead.name));
       trk.markFollowup1(trk.load(), lead.phone);
       console.log(`  ✅ Follow-up 1 → ${lead.name}`);
-      await sleep(randomDelay(20000, 40000));
-    } catch (err) {
-      console.log(`  ❌ Follow-up 1 failed → ${lead.name}: ${err.message}`);
-    }
+      await sleep(randomDelay(20000, 45000));
+    } catch (err) { console.log(`  ❌ FU1 failed → ${lead.name}: ${err.message}`); }
   }
 
   for (const lead of fu2) {
@@ -103,10 +102,17 @@ async function runFollowups(client, clientNum = 1) {
       await send(client, lead.phone, msgs.getFollowup2(lead.name));
       trk.markFollowup2(trk.load(), lead.phone);
       console.log(`  ✅ Follow-up 2 → ${lead.name}`);
-      await sleep(randomDelay(20000, 40000));
-    } catch (err) {
-      console.log(`  ❌ Follow-up 2 failed → ${lead.name}: ${err.message}`);
-    }
+      await sleep(randomDelay(20000, 45000));
+    } catch (err) { console.log(`  ❌ FU2 failed → ${lead.name}: ${err.message}`); }
+  }
+
+  for (const lead of fu3) {
+    try {
+      await send(client, lead.phone, msgs.getFollowup3(lead.name));
+      trk.markFollowup3(trk.load(), lead.phone);
+      console.log(`  ✅ Follow-up 3 → ${lead.name}`);
+      await sleep(randomDelay(20000, 45000));
+    } catch (err) { console.log(`  ❌ FU3 failed → ${lead.name}: ${err.message}`); }
   }
 }
 
