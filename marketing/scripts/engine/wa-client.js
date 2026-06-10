@@ -7,9 +7,19 @@ function createClient(sessionPath, number = 1) {
   const client = new Client({
     authStrategy: new LocalAuth({ dataPath: sessionPath }),
     puppeteer: {
-      headless: true,
-      executablePath: CHROME,
-      args: ['--no-sandbox', '--disable-setuid-sandbox'],
+      headless:        true,
+      executablePath:  CHROME,
+      protocolTimeout: 120000,
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-gpu',
+        '--disable-extensions',
+        '--disable-background-networking',
+        '--disable-default-apps',
+        '--no-first-run',
+      ],
     },
   });
 

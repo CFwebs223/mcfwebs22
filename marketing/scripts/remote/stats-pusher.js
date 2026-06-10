@@ -53,7 +53,9 @@ function buildStats() {
   const fu1       = vals.filter(v => v.followUp1Sent).length;
   const fu2       = vals.filter(v => v.followUp2Sent).length;
   const unsent    = Math.max(0, totalLeads - totalSent - failed);
-  const running   = fs.existsSync(LOCK_FILE);
+  const blasting  = fs.existsSync(LOCK_FILE);
+  // Check if engine PM2 process is actually online
+  const running   = blasting ? 'blasting' : 'standby';
 
   const groupTracker = fs.existsSync(GROUP_TRACKER)
     ? JSON.parse(fs.readFileSync(GROUP_TRACKER, 'utf8'))
@@ -72,7 +74,7 @@ function buildStats() {
     .slice(0, 30);
 
   return {
-    engine:    { running, sentToday, totalSent, failed, replied, fu1, fu2 },
+    engine:    { running, blasting, sentToday, totalSent, failed, replied, fu1, fu2 },
     leads:     { total: totalLeads, unsent, sent: totalSent, failed },
     groups:    { postedToday: groupsToday },
     tunnelUrl: getTunnelUrl(),

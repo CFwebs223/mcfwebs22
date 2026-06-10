@@ -390,8 +390,10 @@ async function load() {
 
 function render(d) {
   const e = d.engine || {}, l = d.leads || {}, g = d.groups || {};
-  document.getElementById('dot').className = 'pulse' + (e.running ? '' : ' off');
-  document.getElementById('btext').textContent = e.running ? 'Engine running' : 'Engine stopped';
+  const isBlasting = e.running === 'blasting' || e.running === true;
+  const isStandby  = e.running === 'standby';
+  document.getElementById('dot').className = 'pulse' + (isBlasting ? '' : ' off');
+  document.getElementById('btext').textContent = isBlasting ? '🔥 Blasting now' : isStandby ? '✅ Online — standby' : 'Engine offline';
   document.getElementById('st').textContent = e.sentToday ?? '—';
   document.getElementById('ts').textContent = e.totalSent ?? '—';
   document.getElementById('rep').textContent = e.replied ?? '—';
