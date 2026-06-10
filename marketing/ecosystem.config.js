@@ -165,7 +165,19 @@ module.exports = {
       env: { NODE_ENV: 'production' },
     },
 
-    // ── 10. Stats Pusher (pushes data to Render every 60s for phone monitoring) ─
+    // ── 10. MCF WAVE — Real-time voice & text communication app ──────────────────
+    {
+      name:         'mcf-wave',
+      script:       'apps/wave/server.js',
+      cwd:          '/Users/mcfwebs/MCFwbes',
+      autorestart:  true,
+      watch:        false,
+      log_file:     'apps/wave/wave.log',
+      error_file:   'apps/wave/wave-error.log',
+      env: { NODE_ENV: 'production', PORT: '5500' },
+    },
+
+    // ── 11. Stats Pusher (pushes data to Render every 60s for phone monitoring) ─
     {
       name:         'mcf-pusher',
       script:       'marketing/scripts/remote/stats-pusher.js',
