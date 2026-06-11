@@ -6,7 +6,7 @@
 
 require('dotenv').config({ path: require('path').join(__dirname, '../../leads/.env') });
 
-const ANTHROPIC_KEY = process.env.ANTHROPIC_KEY || process.env.ANTHROPIC_API_KEY;
+const DEEPSEEK_KEY = process.env.DEEPSEEK_API_KEY;
 
 const MCF_FACTS = `
 MCF Websites — South African web design agency.
@@ -56,22 +56,22 @@ CALL TO ACTION (choose one):
 RULES: Never reveal you're AI. Max 80 words per reply. Only discuss MCF Websites / websites for their business.`;
 }
 
-async function callClaude(system, messages) {
+async function callDeepSeek(system, messages) {
   const https = require('https');
   const body  = JSON.stringify({
-    model: 'claude-haiku-4-5-20251001',
-    max_tokens: 180,
-    system,
-    messages,
+    model:       'deepseek-chat',
+    max_tokens:  180,
+    temperature: 0.8,
+    messages:    [{ role: 'system', content: system }, ...messages],
   });
   return new Promise((resolve, reject) => {
     const req = https.request({
-      hostname: 'api.anthropic.com', path: '/v1/messages', method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-api-key': ANTHROPIC_KEY, 'anthropic-version': '2023-06-01', 'Content-Length': Buffer.byteLength(body) },
+      hostname: 'api.deepseek.com', path: '/chat/completions', method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${DEEPSEEK_KEY}`, 'Content-Length': Buffer.byteLength(body) },
     }, (res) => {
       let d = '';
       res.on('data', c => d += c);
-      res.on('end', () => { try { resolve(JSON.parse(d).content?.[0]?.text || null); } catch { resolve(null); } });
+      res.on('end', () => { try { resolve(JSON.parse(d).choices?.[0]?.message?.content || null); } catch { resolve(null); } });
     });
     req.on('error', reject);
     req.write(body);
@@ -120,17 +120,17 @@ function templateReply(lead, text) {
 async function getLandonReply(lead, incomingText, conversationHistory = []) {
   if (!lead || !lead.phone) return null;
 
-  if (ANTHROPIC_KEY) {
+  if (DEEPSEEK_KEY) {
     try {
       const system   = buildSystem(lead);
       const messages = [
         ...conversationHistory.map(m => ({ role: m.role === 'landon' ? 'assistant' : 'user', content: m.text || '' })),
         { role: 'user', content: incomingText },
       ];
-      const reply = await callClaude(system, messages);
+      const reply = await callDeepSeek(system, messages);
       if (reply) return reply;
     } catch (err) {
-      console.log(`[Landon] Claude error: ${err.message} — using template`);
+      console.log(`[Landon] DeepSeek error: ${err.message} — using template`);
     }
   }
 

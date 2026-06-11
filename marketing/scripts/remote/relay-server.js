@@ -674,4 +674,8 @@ io.on('connection', (sock) => {
   });
 });
 
-httpServer.listen(PORT, '0.0.0.0', () => console.log('MCF LEADAPP + WAVE running on port ' + PORT));
+// ── Music Drop app ────────────────────────────────────────────────────────────
+const musicRouter = require('./music');
+app.use('/music', musicRouter);
+
+httpServer.listen(PORT, '0.0.0.0', () => console.log('MCF LEADAPP + WAVE + MUSIC running on port ' + PORT));
