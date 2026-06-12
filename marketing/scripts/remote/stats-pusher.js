@@ -103,10 +103,39 @@ function buildStats() {
   };
 }
 
+function buildProcessStats(callback) {
+  const { execFile } = require('child_process');
+  execFile(PM2, ['jlist'], (err, stdout) => {
+    if (err) return callback([]);
+    try {
+      const procs = JSON.parse(stdout);
+      const list = procs.map(p => ({
+        name:     p.name,
+        status:   p.pm2_env?.status || 'stopped',
+        restarts: p.pm2_env?.restart_time || 0,
+        cpu:      p.monit?.cpu || 0,
+        mem:      Math.round((p.monit?.memory || 0) / 1024 / 1024),
+      }));
+      callback(list);
+    } catch { callback([]); }
+  });
+}
+
 function pushStats() {
   try {
     const stats = buildStats();
-    const body  = JSON.stringify(stats);
+    buildProcessStats(processes => {
+      stats.processes = processes;
+      const body = JSON.stringify(stats);
+      sendPush(body, stats);
+    });
+  } catch (err) {
+    console.error(`[${new Date().toLocaleTimeString()}] Error building stats: ${err.message}`);
+  }
+}
+
+function sendPush(body, stats) {
+  try {
     const url   = new URL(RELAY_URL + '/push');
 
     const options = {

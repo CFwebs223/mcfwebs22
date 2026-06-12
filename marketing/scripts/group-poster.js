@@ -380,6 +380,42 @@ All packages:
 
 WhatsApp 075 320 3477 📱
 🌐 mcfwebs.agency`,
+
+  `📈 *Is your SA business stuck at the same revenue as last year?*
+
+Most small businesses plateau because:
+❌ No online presence (invisible to new clients)
+❌ No clear growth strategy
+❌ No system to attract & convert leads
+
+*MCF Websites now offers Business Growth Consulting:*
+
+🎯 90-min strategy session — we map exactly what's holding you back
+📊 Growth plan document — your 90-day action roadmap
+💡 Marketing strategy — social, WhatsApp, Google, referrals
+🌐 Website + digital presence setup
+
+One consultation with our team could unlock R10k–R50k in new revenue.
+
+*Book a free 15-min discovery call: 075 320 3477*
+🌐 mcfwebs.agency/consulting`,
+
+  `🚀 *Two ways MCF Websites helps SA businesses grow:*
+
+*1. WEBSITE* — Get found on Google
+• Professional site in 5 days
+• From R2,500 once-off, no monthly fees
+• We build first, you pay when you love it
+
+*2. GROWTH CONSULTING* — Unlock your revenue ceiling
+• Business audit & growth strategy session
+• Marketing plan (WhatsApp, social, SEO, referrals)
+• Sales scripts & lead conversion system
+• Monthly accountability & coaching
+
+📞 One call can change your business trajectory.
+WhatsApp 075 320 3477 to book a free discovery chat.
+🌐 mcfwebs.agency`,
 ];
 
 function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
@@ -396,12 +432,17 @@ function loadTracker() {
 function saveTracker(t) { fs.writeFileSync(TRACKER, JSON.stringify(t, null, 2)); }
 
 function nextGroup(tracker) {
-  const cutoff = Date.now() - 23 * 60 * 60 * 1000; // 23h ago
+  const postedCutoff = Date.now() - 23 * 60 * 60 * 1000;
+  const failedCutoff = Date.now() - 2 * 60 * 60 * 1000; // skip failed groups for 2h
   for (const url of GROUPS) {
-    const last = tracker[url]?.lastPosted;
-    if (!last || new Date(last).getTime() < cutoff) return url;
+    const entry = tracker[url] || {};
+    const lastPosted = entry.lastPosted ? new Date(entry.lastPosted).getTime() : 0;
+    const lastFailed = entry.lastFailed ? new Date(entry.lastFailed).getTime() : 0;
+    if (lastPosted > postedCutoff) continue;   // posted recently
+    if (lastFailed > failedCutoff) continue;   // failed recently — skip for now
+    return url;
   }
-  return null; // all groups posted to today
+  return null;
 }
 
 function getPost() {
@@ -483,21 +524,39 @@ async function main() {
 
   if (!fs.existsSync(SESSION)) fs.mkdirSync(SESSION, { recursive: true });
 
-  const browser = await puppeteer.launch({
-    headless: true,
-    executablePath: CHROME,
-    userDataDir: SESSION,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1280,900'],
-    defaultViewport: { width: 1280, height: 900 },
-  });
+  const CHROME_ARGS = [
+    '--no-sandbox',
+    '--disable-setuid-sandbox',
+    '--disable-dev-shm-usage',
+    '--disable-gpu',
+    '--no-proxy-server',
+    '--proxy-bypass-list=*',
+    '--disable-extensions',
+    '--window-size=1280,900',
+  ];
+
+  let browser;
+  try {
+    browser = await puppeteer.launch({
+      headless: true,
+      executablePath: CHROME,
+      userDataDir: SESSION,
+      args: CHROME_ARGS,
+      defaultViewport: { width: 1280, height: 900 },
+      timeout: 60000,
+    });
+  } catch (launchErr) {
+    log(`❌ Chrome failed to start: ${launchErr.message}`);
+    return;
+  }
 
   const page = await browser.newPage();
   await page.setUserAgent('Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36');
 
   try {
     // Check login state
-    await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 30000 });
-    await sleep(2000);
+    await page.goto('https://www.facebook.com', { waitUntil: 'domcontentloaded', timeout: 45000 });
+    await sleep(3000);
 
     const notLoggedIn = await page.$('input[name="email"]');
     if (notLoggedIn) {
@@ -513,14 +572,18 @@ async function main() {
     log(`✅ Posted to ${groupName}`);
 
     // Stats
-    const today   = new Date().toISOString().slice(0, 10);
+    const today      = new Date().toISOString().slice(0, 10);
     const todayCount = Object.values(tracker).filter(v => v.lastPosted?.startsWith(today)).length;
     log(`   Posts today: ${todayCount} | Groups remaining: ${GROUPS.length - todayCount}`);
 
   } catch (err) {
+    // Mark as attempted so we don't get stuck on same group
+    tracker[groupUrl] = tracker[groupUrl] || {};
+    tracker[groupUrl].lastFailed = new Date().toISOString();
+    saveTracker(tracker);
     log(`❌ Failed: ${err.message}`);
   } finally {
-    await browser.close();
+    try { await browser.close(); } catch {}
   }
 }
 
@@ -533,7 +596,7 @@ async function loginMode() {
     headless: false,
     executablePath: CHROME,
     userDataDir: SESSION,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--window-size=1280,900'],
+    args: ['--no-sandbox', '--disable-setuid-sandbox', '--no-proxy-server', '--proxy-bypass-list=*', '--window-size=1280,900'],
     defaultViewport: { width: 1280, height: 900 },
   });
 

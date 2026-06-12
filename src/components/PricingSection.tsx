@@ -6,24 +6,31 @@ import Ambient3DBackground from './Ambient3DBackground';
 
 const tiers = [
   {
-    name: 'Digital Menus',
-    price: 'R2,000',
-    description: 'Perfect for restaurants & cafes.',
-    detail: 'Full digital menu with online ordering, QR codes, and real-time updates.',
+    name: 'Starter Website',
+    price: 'R2,500',
+    description: 'Get found on Google.',
+    detail: '3–5 pages, Google SEO, WhatsApp button, mobile-friendly, domain + hosting yr 1. Live in 5 days.',
   },
   {
-    name: 'Classic Sites',
-    price: 'R5,000',
-    description: 'Professional presence for businesses.',
-    detail: 'Multi-page website with CMS, contact forms, analytics, and SEO optimization.',
-    popular: true
+    name: 'Business Website',
+    price: 'R4,500',
+    description: 'Book clients on autopilot.',
+    detail: 'Everything in Starter + booking system, gallery, Google Maps. Perfect for salons, trades & services.',
+    popular: true,
   },
   {
-    name: '3D Scroll-Based',
-    price: 'R8,000',
-    description: 'Cinematic experiences.',
-    detail: 'Custom 3D scroll-triggered animations, WebGL integration, and premium interactions.',
-  }
+    name: 'Premium / Store',
+    price: 'R7,500',
+    description: 'Sell online 24/7.',
+    detail: 'Full online store, payment gateway, inventory. Ideal for product businesses and e-commerce.',
+  },
+  {
+    name: 'Growth Consulting',
+    price: 'R1,500',
+    description: 'Strategy session.',
+    detail: '90-min deep-dive: growth audit, 90-day action plan, marketing strategy, sales scripts. Book via WhatsApp.',
+    badge: 'New',
+  },
 ];
 
 export default function PricingSection() {

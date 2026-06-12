@@ -2,7 +2,7 @@
 
 import { useRef, useState } from 'react';
 import { motion, useScroll, useTransform, useMotionValueEvent } from 'framer-motion';
-import { Layout, Smartphone, CalendarDays, ShoppingBag, Globe, Zap } from 'lucide-react';
+import { Layout, Smartphone, CalendarDays, ShoppingBag, Globe, Zap, TrendingUp, Users } from 'lucide-react';
 import FrameSequence from './FrameSequence';
 
 const TOTAL_FRAMES = 40;
@@ -14,6 +14,8 @@ const services = [
   { icon: <CalendarDays className="w-5 h-5" />, title: 'Booking Systems', desc: 'Simple booking flows for services and appointments.' },
   { icon: <ShoppingBag className="w-5 h-5" />, title: 'Online Stores', desc: 'Lightweight e-commerce experiences.' },
   { icon: <Zap className="w-5 h-5" />, title: 'Business Automation', desc: 'Forms, lead capture, and AI-assisted workflows.' },
+  { icon: <TrendingUp className="w-5 h-5" />, title: 'Growth Consulting', desc: '90-min strategy sessions to unlock revenue and scale your business.' },
+  { icon: <Users className="w-5 h-5" />, title: 'Marketing Strategy', desc: 'Custom WhatsApp, social, and SEO plans for more clients every month.' },
 ];
 
 export default function ServicesSection() {

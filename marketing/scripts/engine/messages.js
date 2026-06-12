@@ -454,6 +454,48 @@ Hope business is going well — and I hope to work with you one day! 😊
 — Christopher, MCF Websites`,
 ];
 
+// ── Consulting outreach (for leads who seem established/growing) ───────────────
+const CONSULTING = [
+  (n) => `Hi ${n}! 👋
+
+Noticed your business is active — which is great! But are you growing as fast as you want?
+
+I'm Christopher from *MCF Websites & Business Growth*. We help SA businesses:
+📈 Get more clients (online presence + SEO)
+🎯 Convert more leads (sales scripts + follow-up)
+💡 Build systems so the business runs without you
+
+*Growth Strategy Session — R1,500 once-off:*
+→ 90-min deep-dive into your business
+→ Written 90-day growth plan
+→ Marketing strategy built for your industry
+
+Worked with 50+ SA businesses. One session often unlocks R10k–R50k in new revenue within 90 days.
+
+*Free 15-min discovery call first — no commitment.*
+📞 075 320 3477 | 🌐 mcfwebs.agency/consulting`,
+
+  (n) => `Hey ${n}! 😊
+
+Quick question — what's the #1 thing holding your business back from doubling revenue right now?
+
+Most SA business owners say: no time, too few leads, or clients aren't converting. We fix all three.
+
+I'm Christopher from *MCF Websites*. Beyond websites, I now offer *Business Growth Consulting* for service businesses ready to scale.
+
+What you get in one session:
+✅ Business audit — where you're leaving money on the table
+✅ 90-day growth roadmap (specific, actionable steps)
+✅ Lead generation strategy for your industry
+✅ Sales conversion scripts
+✅ Accountability structure
+
+*R1,500 for a 90-min strategy session. Money-back if you don't find at least 3 actionable insights.*
+
+Want to chat for 15 min to see if this is right for ${n}?
+📞 075 320 3477`,
+];
+
 // ── Selector functions ─────────────────────────────────────────────────────────
 function getInitial(name, category = '') {
   const cat = (category || '').toLowerCase();
@@ -476,8 +518,9 @@ function getInitial(name, category = '') {
   return pool[Math.floor(Math.random() * pool.length)](name);
 }
 
+function getInitialConsulting(name) { return CONSULTING[Math.floor(Math.random() * CONSULTING.length)](name); }
 function getFollowup1(name) { return FOLLOWUP_1[Math.floor(Math.random() * FOLLOWUP_1.length)](name); }
 function getFollowup2(name) { return FOLLOWUP_2[Math.floor(Math.random() * FOLLOWUP_2.length)](name); }
 function getFollowup3(name) { return FOLLOWUP_3[Math.floor(Math.random() * FOLLOWUP_3.length)](name); }
 
-module.exports = { getInitial, getFollowup1, getFollowup2, getFollowup3 };
+module.exports = { getInitial, getInitialConsulting, getFollowup1, getFollowup2, getFollowup3 };
