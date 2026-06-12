@@ -33,7 +33,15 @@ const client = new Client({
   puppeteer: {
     headless: true,
     executablePath: CHROME,
-    args: ['--no-sandbox', '--disable-setuid-sandbox', '--disable-dev-shm-usage'],
+    args: [
+      '--no-sandbox',
+      '--disable-setuid-sandbox',
+      '--disable-dev-shm-usage',
+      '--disable-gpu',
+      '--no-proxy-server',
+      '--proxy-bypass-list=*',
+      '--window-size=800,600',
+    ],
   },
 });
 

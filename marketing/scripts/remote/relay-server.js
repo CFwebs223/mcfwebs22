@@ -139,6 +139,17 @@ app.get('/stats', appAuth, (req, res) => {
 
 app.get('/health', (req, res) => res.json({ ok: true, hasData: !!latestStats }));
 
+app.get('/debug', appAuth, (req, res) => {
+  res.json({
+    hasData:    !!latestStats,
+    lastUpdate,
+    silentMs:   lastUpdate ? Date.now() - new Date(lastUpdate).getTime() : null,
+    queueLen:   commandQueue.length,
+    engine:     latestStats?.engine || null,
+    processes:  latestStats?.processes?.map(p => `${p.name}:${p.status}`) || [],
+  });
+});
+
 // ── Twilio cold call TwiML webhooks (permanent URL, no tunnel needed) ─────────
 const CALL_FWD = process.env.CALL_FWD_NUMBER || '+27753203477'; // Christopher
 
